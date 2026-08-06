@@ -14,8 +14,10 @@ export interface Product {
   id: number;
   name: string;
   brand: string;
-  shape: 'Round' | 'Rectangle' | 'Aviator' | 'Square' | 'Cat-Eye';
+  shape: string;
   color_description: string;
+  category?: string;
+  description?: string;
   price_full_gbp: number;
   price_frame_only_gbp: number;
   stock_quantity: number;
@@ -24,15 +26,15 @@ export interface Product {
 }
 
 export interface PrescriptionData {
-  odSphere: string;
-  odCyl: string;
-  odAxis: string;
-  odAdd: string;
-  osSphere: string;
-  osCyl: string;
-  osAxis: string;
-  osAdd: string;
-  pd: string;
+  odSphere: number;
+  odCyl: number;
+  odAxis: number;
+  odAdd: number;
+  osSphere: number;
+  osCyl: number;
+  osAxis: number;
+  osAdd: number;
+  pd: number;
   uploadedFileUrl?: string;
 }
 

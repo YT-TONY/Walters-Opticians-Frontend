@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+:root {
+  --navy: #021438;
+  --cream: #FBFAF5;
+  --offwhite: #F3F0E6;
+  --gold: #E6AA38;
+  --charcoal: #1A1A1A;
+  --slate: #5E6470;
+  --border: #E5E0D8;
+}
+
+/* Reusable Utility Classes */
+.bg-walters-navy { background-color: var(--navy); }
+.bg-walters-cream { background-color: var(--cream); }
+.bg-walters-offwhite { background-color: var(--offwhite); }
+.bg-walters-gold { background-color: var(--gold); }
+
+.text-walters-navy { color: var(--navy); }
+.text-walters-cream { color: var(--cream); }
+.text-walters-gold { color: var(--gold); }
+.text-walters-charcoal { color: var(--charcoal); }
+.text-walters-slate { color: var(--slate); }
+
+.border-walters-border { border-color: var(--border); }
+.border-walters-gold { border-color: var(--gold); }
+.border-walters-navy { border-color: var(--navy); }

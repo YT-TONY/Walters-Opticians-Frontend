@@ -3,16 +3,19 @@ import React from 'react';
 import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useCurrency } from './hooks/useCurrency';
-import { CartProvider} from './context/CartProvider';
+import { CartProvider } from './context/CartProvider';
 import { useCart } from './hooks/useCart';
 import { CurrencySelector } from './components/CurrencySelector';
 import { PrescriptionModal } from './components/PrescriptionModal';
+import { ChatBot } from './components/ChatBot';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { Catalog } from './pages/Catalog';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Checkout } from './pages/Checkout';
 import { OrderSuccess } from './pages/OrderSucess';
 import { Profile } from './pages/Profile';
+import { Dashboard } from './pages/admin/Dashboard';
 import { ShoppingBag, User as UserIcon, LogOut, Shield } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
@@ -101,6 +104,16 @@ const AppContent: React.FC = () => {
           <Route path="/checkout" element={<Checkout cartItems={cartItems} onClearCart={handleClearCart} />} />
           <Route path="/order-success/:orderId" element={<OrderSuccess />} />
           <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+          
+          {/* Admin Protected Route */}
+          <Route 
+            path="/admin/dashboard" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
 
@@ -113,6 +126,9 @@ const AppContent: React.FC = () => {
           framePrice={formatPrice(selectedProduct.price_full_gbp)}
         />
       )}
+
+      {/* Global AI Chatbot */}
+      <ChatBot />
     </div>
   );
 };

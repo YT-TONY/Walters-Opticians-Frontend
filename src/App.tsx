@@ -3,6 +3,8 @@ import React from 'react';
 import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useCurrency } from './hooks/useCurrency';
+import { AuthProvider } from './context/AuthProvider'; 
+import { CurrencyProvider } from './context/CurrencyProvider'; // <-- Uncommented this
 import { CartProvider } from './context/CartProvider';
 import { useCart } from './hooks/useCart';
 import { CurrencySelector } from './components/CurrencySelector';
@@ -135,9 +137,13 @@ const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <CartProvider>
-      <AppContent />
-    </CartProvider>
+    <AuthProvider>
+      <CurrencyProvider> {/* <-- Added the wrapper here */}
+        <CartProvider>
+          <AppContent />
+        </CartProvider>
+      </CurrencyProvider>
+    </AuthProvider>
   );
 };
 

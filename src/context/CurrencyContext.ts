@@ -1,21 +1,24 @@
+// src/context/CurrencyContext.ts
 import { createContext } from 'react';
 
-export type CurrencyCode = 'GBP' | 'NGN' | 'USD' | 'EUR' | string;
+// 1. Export the CurrencyCode type so other files can import it
+export type CurrencyCode = 'GBP' | 'USD' | 'EUR' | 'NGN';
 
-export interface CurrencyConfig {
-  code: CurrencyCode;
+export interface CurrencyDetails {
   symbol: string;
-  rateVsGbp: number; // Conversion rate relative to 1 GBP
+  label: string;
+  defaultRate: number;
 }
 
 export interface CurrencyContextType {
   currency: CurrencyCode;
   symbol: string;
   setCurrency: (code: CurrencyCode) => void;
-  formatPrice: (amountInGbp: number) => string;
-  convertPrice: (amountInGbp: number) => number;
-  availableCurrencies: Record<string, { symbol: string; label: string }>;
+  formatPrice: (priceInGbp: number) => string;
+  convertPrice: (priceInGbp: number) => number;
+  availableCurrencies: Record<string, CurrencyDetails>;
   loading: boolean;
 }
 
+// 2. Export the context
 export const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);

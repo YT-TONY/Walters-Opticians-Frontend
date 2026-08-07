@@ -1,8 +1,9 @@
+// src/context/CurrencyProvider.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { CurrencyContext, CurrencyCode } from './CurrencyContext';
+import { CurrencyContext, type CurrencyCode, type CurrencyDetails } from './CurrencyContext';
 
 // Standard supported currencies & fallback exchange rates (Base: 1 GBP)
-const SUPPORTED_CURRENCIES: Record<string, { symbol: string; label: string; defaultRate: number }> = {
+const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyDetails> = {
   GBP: { symbol: '£', label: 'GBP (£)', defaultRate: 1 },
   NGN: { symbol: '₦', label: 'NGN (₦)', defaultRate: 2050 },
   USD: { symbol: '$', label: 'USD ($)', defaultRate: 1.28 },
@@ -46,7 +47,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // 2. IP-based automatic location and currency detection
   useEffect(() => {
-    const savedCurrency = localStorage.getItem('walters_user_currency');
+    const savedCurrency = localStorage.getItem('walters_user_currency') as CurrencyCode | null;
 
     if (savedCurrency && SUPPORTED_CURRENCIES[savedCurrency]) {
       setCurrencyState(savedCurrency);
@@ -59,8 +60,9 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .then((res) => res.json())
       .then((data) => {
         const detectedCurrency = data?.currency;
-        if (detectedCurrency && SUPPORTED_CURRENCIES[detectedCurrency]) {
-          setCurrencyState(detectedCurrency);
+        // Check if key exists in SUPPORTED_CURRENCIES and cast safely
+        if (detectedCurrency && detectedCurrency in SUPPORTED_CURRENCIES) {
+          setCurrencyState(detectedCurrency as CurrencyCode);
         } else if (data?.country_code === 'NG') {
           setCurrencyState('NGN');
         } else if (data?.country_code === 'US') {

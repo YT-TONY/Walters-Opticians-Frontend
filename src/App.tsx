@@ -13,6 +13,7 @@ import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Catalog } from './pages/Catalog';
+import { ProductDetail } from './pages/ProductDetail';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Checkout } from './pages/Checkout';
@@ -38,7 +39,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-cream flex flex-col font-sans text-charcoal">
       <Toaster position="bottom-right" richColors />
 
-      {/* Render the updated Navbar component */}
+      {/* Render Navbar */}
       <Navbar />
 
       <main className="grow">
@@ -52,6 +53,9 @@ const AppContent: React.FC = () => {
               </>
             } 
           />
+          {/* Fixed: Product Details Route Added */}
+          <Route path="/product/:id" element={<ProductDetail />} />
+
           <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
           <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
           <Route path="/checkout" element={<Checkout cartItems={cartItems} onClearCart={handleClearCart} />} />

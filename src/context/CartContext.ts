@@ -6,6 +6,7 @@ export interface CartContextType {
   cartItems: CartItem[];
   isModalOpen: boolean;
   selectedProduct: Product | null;
+  handleAddStandard: (product: Product) => void;
   handleAddFrameOnly: (product: Product) => void;
   handleSelectPrescription: (product: Product) => void;
   handleConfirmPrescription: (prescription: PrescriptionData) => void;

@@ -9,6 +9,23 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  // Default Option: Standard Non-Prescription Glasses
+  const handleAddStandard = (product: Product) => {
+    setCartItems((prev) => {
+      const existing = prev.find(
+        (item) => item.product.id === product.id && item.purchaseType === 'standard'
+      );
+      if (existing) {
+        return prev.map((item) =>
+          item === existing ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prev, { product, quantity: 1, purchaseType: 'standard' }];
+    });
+    toast.success(`${product.name} added to bag!`);
+  };
+
+  // Frame Only (Demo Lenses)
   const handleAddFrameOnly = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find(
@@ -24,6 +41,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.success(`${product.name} (Frame Only) added to bag!`);
   };
 
+  // Prescription Option (Triggers Modal)
   const handleSelectPrescription = (product: Product) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
@@ -63,6 +81,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         cartItems,
         isModalOpen,
         selectedProduct,
+        handleAddStandard,
         handleAddFrameOnly,
         handleSelectPrescription,
         handleConfirmPrescription,

@@ -1,12 +1,14 @@
+// src/context/AuthContext.ts
 import { createContext } from 'react';
-import type { User } from '../types';
+import {  type UserProfile, type LoginPayload, type SignupPayload } from '../api/auth';
 
 export interface AuthContextType {
-  user: User | null;
-  token: string | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  loading: boolean;
+  login: (credentials: LoginPayload) => Promise<void>;
+  register: (payload: SignupPayload) => Promise<void>;
   logout: () => void;
 }
 

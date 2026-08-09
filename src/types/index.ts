@@ -11,6 +11,7 @@ export interface AuthResponse {
 }
 
 export interface Product {
+  images?: string[];
   id: number;
   name: string;
   brand: string;
@@ -38,9 +39,11 @@ export interface PrescriptionData {
   uploadedFileUrl?: string;
 }
 
+export type PurchaseType = 'standard' | 'frames_only' | 'prescription';
+
 export interface CartItem {
   product: Product;
   quantity: number;
-  purchaseType: 'frames_only' | 'prescription';
+  purchaseType: PurchaseType;
   prescription?: PrescriptionData;
 }

@@ -1,7 +1,7 @@
 // src/components/ProductCard.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 import type { Product } from '../types/index';
 
 interface ProductCardProps {
@@ -16,39 +16,47 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   formatPrice,
 }) => {
   const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [isAdded, setIsAdded] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   const handleCardClick = () => {
     navigate(`/product/${product.id}`);
   };
 
-  const triggerAddToCart = async (option: string) => {
+  const handleOptionChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.stopPropagation();
+    const value = e.target.value;
+    if (!value) return;
+
+    setSelectedOption(value);
     setLoading(true);
+    
     try {
-      await onAddToCart(product, option);
-      setLoading(false);
-      setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 1200);
+      // Promise.all ensures the loading spinner shows for at least 800ms 
+      // even if onAddToCart resolves instantly, fixing the "invisible" animation.
+      await Promise.all([
+        onAddToCart(product, value),
+        new Promise((resolve) => setTimeout(resolve, 800))
+      ]);
     } catch {
+      // Error handling
+    } finally {
       setLoading(false);
+      // Reset the dropdown back to default state
+      setSelectedOption('');
     }
   };
 
-  const handleOptionSelect = (e: React.MouseEvent, option: string) => {
-    e.stopPropagation();
-    triggerAddToCart(option);
-    setIsDropdownOpen(false);
-  };
+  const frameShape = product.category || 'ROUND';
+  const frameColor = product.description ? product.description.slice(0, 18) : 'TORTOISE AMBER';
 
   return (
     <div 
       onClick={handleCardClick}
-      className="group relative cursor-pointer flex flex-col bg-transparent transition-all duration-300"
+      className="group relative cursor-pointer flex flex-col bg-[#F6F4EE] border border-[#E2DBD0] rounded-sm transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden"
     >
-      {/* Image Container */}
-      <div className="relative w-full aspect-4/3 bg-[#F9F8F6] rounded-xl overflow-hidden mb-4 border border-charcoal/5">
+      {/* Product Image Container (Changed to aspect-square to reduce excessive height) */}
+      <div className="relative w-full aspect-square bg-transparent overflow-hidden">
         <img
           src={product.image_url || ''}
           alt={product.name}
@@ -56,85 +64,57 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         />
       </div>
 
-      {/* Product Details */}
-      <div className="flex flex-col space-y-1 px-1">
-        <div className="flex items-baseline justify-between">
-          <h3 className="font-serif text-lg font-normal tracking-wide text-walters-navy group-hover:text-walters-gold transition-colors duration-200">
-            {product.name}
-          </h3>
-          <span className="text-sm font-light text-walters-charcoal/80">
-            {formatPrice(product.price_full_gbp)}
-          </span>
+      {/* Content Container */}
+      <div className="flex flex-col p-4">
+        {/* Product Metadata Header */}
+        <div className="flex flex-col space-y-1 mb-4">
+          <div className="flex items-baseline justify-between">
+            <h3 className="font-serif text-lg font-normal tracking-wide text-walters-navy">
+              {product.name}
+            </h3>
+            <span className="text-sm font-medium text-walters-navy">
+              {formatPrice(product.price_full_gbp)}
+            </span>
+          </div>
+          
+          <p className="text-[11px] font-light text-walters-charcoal/60 tracking-wider uppercase">
+            {frameShape} &nbsp;·&nbsp; {frameColor}
+          </p>
         </div>
-        
-        <p className="text-xs font-light text-walters-charcoal/50 tracking-wider uppercase">
-          {product.category || 'Eyewear'}
-        </p>
-      </div>
 
-      {/* Add to Bag Controls */}
-      <div className="relative mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        {/* Dropdown Menu */}
-        <div className="relative flex-1">
-          <button
-            type="button"
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full flex items-center justify-between bg-white/80 hover:bg-white text-walters-navy text-xs font-light tracking-wide px-4 py-2.5 rounded-full border border-walters-navy/15 hover:border-walters-navy/40 transition-all duration-200 shadow-sm"
-          >
-            <span>Add to Bag</span>
-            <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isDropdownOpen && (
-            <div className="absolute bottom-full left-0 mb-2 w-full bg-white rounded-xl shadow-2xl border border-charcoal/10 py-1.5 z-20 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
-              <button
-                type="button"
-                onClick={(e) => handleOptionSelect(e, 'Standard')}
-                className="w-full text-left px-4 py-2.5 text-xs font-light text-walters-charcoal hover:bg-walters-navy hover:text-white transition-all duration-150 flex items-center justify-between group/item"
+        {/* Add to Bag / Select Dropdown */}
+        <div className="relative w-full" onClick={(e) => e.stopPropagation()}>
+          {loading ? (
+            /* Loading State (Matches grey pill with spinner) */
+            <div className="w-full h-10 bg-[#636267] rounded-full flex items-center justify-center text-white transition-colors duration-200">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : (
+            /* Default Select Dropdown */
+            <div className="relative">
+              <select
+                value={selectedOption}
+                onChange={handleOptionChange}
+                className="w-full bg-white text-walters-navy text-xs font-normal h-10 pl-4 pr-8 rounded-full border border-walters-navy/30 hover:border-walters-navy focus:border-walters-navy outline-none cursor-pointer appearance-none transition-all duration-200 text-center"
               >
-                <span>Add to Bag (Non-Prescription)</span>
-                <span className="text-[10px] opacity-70 group-hover/item:opacity-100">{formatPrice(product.price_full_gbp)}</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleOptionSelect(e, 'Just Frames')}
-                className="w-full text-left px-4 py-2.5 text-xs font-light text-walters-charcoal hover:bg-walters-navy hover:text-white transition-all duration-150 flex items-center justify-between group/item"
-              >
-                <span>Just Frames</span>
-                <span className="text-[10px] opacity-70 group-hover/item:opacity-100">Demo Lenses</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleOptionSelect(e, 'Prescription')}
-                className="w-full text-left px-4 py-2.5 text-xs font-medium text-walters-navy hover:bg-walters-navy hover:text-white transition-all duration-150 flex items-center justify-between group/item border-t border-charcoal/5"
-              >
-                <span>+ Add Prescription</span>
-                <span className="text-[10px] opacity-70 group-hover/item:opacity-100">Custom</span>
-              </button>
+                <option value="" disabled hidden>
+                  Select an option
+                </option>
+                <option value="Standard" className="text-black bg-white">
+                  Non-Prescription ({formatPrice(product.price_full_gbp)})
+                </option>
+                <option value="Just Frames" className="text-black bg-white">
+                  Just Frames
+                </option>
+                <option value="Prescription" className="text-black bg-white">
+                  + Add Prescription
+                </option>
+              </select>
+              {/* Dropdown Arrow Indicator */}
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-walters-navy pointer-events-none opacity-70" />
             </div>
           )}
         </div>
-
-        {/* Action Button with Loading Spinner */}
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => triggerAddToCart('Standard')}
-          className={`relative p-2.5 rounded-full text-white transition-all duration-300 shrink-0 ${
-            isAdded
-              ? 'bg-emerald-600 scale-110 shadow-md'
-              : 'bg-walters-navy hover:bg-walters-navy/90 active:scale-95'
-          }`}
-          title="Quick Add"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-white" />
-          ) : isAdded ? (
-            <Check className="w-4 h-4 stroke-2 animate-in zoom-in-50 duration-200" />
-          ) : (
-            <ShoppingBag className="w-4 h-4 stroke-[1.5]" />
-          )}
-        </button>
       </div>
     </div>
   );

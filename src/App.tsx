@@ -1,17 +1,24 @@
-// src/App.tsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useCurrency } from './hooks/useCurrency';
+import { useCart } from './hooks/useCart';
+
+// Context Providers
 import { AuthProvider } from './context/AuthProvider'; 
 import { CurrencyProvider } from './context/CurrencyProvider';
+import { CategoryProvider } from './context/CategoryProvider';
 import { CartProvider } from './context/CartProvider';
-import { useCart } from './hooks/useCart';
+
+// Layout & UI Components
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from 'sonner';
+
+// Pages
 import { Catalog } from './pages/Catalog';
 import { ProductDetail } from './pages/ProductDetail';
 import { Login } from './pages/Login';
@@ -20,7 +27,6 @@ import { Checkout } from './pages/Checkout';
 import { OrderSuccess } from './pages/OrderSucess';
 import { Profile } from './pages/Profile';
 import { Dashboard } from './pages/admin/Dashboard';
-import { Toaster } from 'sonner';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -53,7 +59,7 @@ const AppContent: React.FC = () => {
               </>
             } 
           />
-          {/* Fixed: Product Details Route Added */}
+          
           <Route path="/product/:id" element={<ProductDetail />} />
 
           <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
@@ -95,9 +101,11 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <AuthProvider>
         <CurrencyProvider>
-          <CartProvider>
-            <AppContent />
-          </CartProvider>
+          <CategoryProvider>
+            <CartProvider>
+              <AppContent />
+            </CartProvider>
+          </CategoryProvider>
         </CurrencyProvider>
       </AuthProvider>
     </BrowserRouter>

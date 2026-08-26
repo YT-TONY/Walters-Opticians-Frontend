@@ -8,29 +8,41 @@ import { toast } from 'sonner';
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const storageKey = user?.id ? `walters_cart_${user.id}` : 'walters_cart_guest';
+  const savedStorageKey = user?.id ? `walters_saved_${user.id}` : 'walters_saved_guest';
 
   const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
+
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem(storageKey);
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [savedItems, setSavedItems] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem(savedStorageKey);
+    return saved ? JSON.parse(saved) : [];
+  });
+
   if (storageKey !== prevStorageKey) {
     setPrevStorageKey(storageKey);
-    const saved = localStorage.getItem(storageKey);
-    setCartItems(saved ? JSON.parse(saved) : []);
+    const savedCart = localStorage.getItem(storageKey);
+    const savedList = localStorage.getItem(savedStorageKey);
+    setCartItems(savedCart ? JSON.parse(savedCart) : []);
+    setSavedItems(savedList ? JSON.parse(savedList) : []);
   }
 
-  // Drawer & Modal State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cartItems));
   }, [cartItems, storageKey]);
 
-  // Add standard item and auto-open drawer
+  useEffect(() => {
+    localStorage.setItem(savedStorageKey, JSON.stringify(savedItems));
+  }, [savedItems, savedStorageKey]);
+
   const handleAddStandard = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find(
@@ -47,7 +59,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsDrawerOpen(true);
   };
 
-  // Add frame only and auto-open drawer
   const handleAddFrameOnly = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find(
@@ -64,27 +75,43 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsDrawerOpen(true);
   };
 
-  const handleSelectPrescription = (product: Product) => {
+  const handleSelectPrescription = (product: Product, editIndex?: number) => {
     setSelectedProduct(product);
+    if (typeof editIndex === 'number') {
+      setEditingItemIndex(editIndex);
+    } else {
+      setEditingItemIndex(null);
+    }
     setIsModalOpen(true);
   };
 
-  // Confirm prescription and auto-open drawer
   const handleConfirmPrescription = (prescription: PrescriptionData) => {
     if (!selectedProduct) return;
-    setCartItems((prev) => [
-      ...prev,
-      { product: selectedProduct, quantity: 1, purchaseType: 'prescription', prescription },
-    ]);
+
+    if (editingItemIndex !== null) {
+      setCartItems((prev) =>
+        prev.map((item, i) =>
+          i === editingItemIndex ? { ...item, prescription } : item
+        )
+      );
+      toast.success(`Updated prescription details for ${selectedProduct.name}`);
+      setEditingItemIndex(null);
+    } else {
+      setCartItems((prev) => [
+        ...prev,
+        { product: selectedProduct, quantity: 1, purchaseType: 'prescription', prescription },
+      ]);
+      toast.success(`Prescription lenses added for ${selectedProduct.name}!`);
+      setIsDrawerOpen(true);
+    }
     setIsModalOpen(false);
     setSelectedProduct(null);
-    toast.success(`Prescription lenses added for ${selectedProduct.name}!`);
-    setIsDrawerOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
+    setEditingItemIndex(null);
   };
 
   const handleClearCart = () => {
@@ -94,31 +121,50 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleRemoveItem = (index: number) => {
     setCartItems((prev) => prev.filter((_, i) => i !== index));
+    toast.info('Item removed from basket');
   };
 
-  // Quantity Delta updater (+1 or -1)
-  const handleUpdateQuantity = (index: number, delta: number) => {
+  const handleUpdateQuantity = (index: number, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveItem(index);
+      return;
+    }
     setCartItems((prev) =>
-      prev
-        .map((item, i) => {
-          if (i === index) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[]
+      prev.map((item, i) => (i === index ? { ...item, quantity } : item))
     );
+  };
+
+  const handleSaveForLater = (index: number) => {
+    const itemToSave = cartItems[index];
+    if (!itemToSave) return;
+    setCartItems((prev) => prev.filter((_, i) => i !== index));
+    setSavedItems((prev) => [...prev, itemToSave]);
+    toast.success(`Moved ${itemToSave.product.name} to Save for Later`);
+  };
+
+  const handleMoveToCart = (index: number) => {
+    const itemToMove = savedItems[index];
+    if (!itemToMove) return;
+    setSavedItems((prev) => prev.filter((_, i) => i !== index));
+    setCartItems((prev) => [...prev, itemToMove]);
+    toast.success(`Moved ${itemToMove.product.name} back to your basket!`);
+  };
+
+  const handleRemoveSavedItem = (index: number) => {
+    setSavedItems((prev) => prev.filter((_, i) => i !== index));
+    toast.info('Saved item removed');
   };
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
+        savedItems,
         isDrawerOpen,
         setIsDrawerOpen,
         isModalOpen,
         selectedProduct,
+        editingItemIndex,
         handleAddStandard,
         handleAddFrameOnly,
         handleSelectPrescription,
@@ -127,15 +173,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         handleClearCart,
         handleRemoveItem,
         handleUpdateQuantity,
+        handleSaveForLater,
+        handleMoveToCart,
+        handleRemoveSavedItem,
       }}
     >
       {children}
-      {/* Global Drawer mount */}
       <CartDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         cartItems={cartItems}
-        onUpdateQty={handleUpdateQuantity}
+        onUpdateQty={(idx, delta) => {
+          const target = cartItems[idx];
+          if (target) handleUpdateQuantity(idx, target.quantity + delta);
+        }}
         onRemove={handleRemoveItem}
       />
     </CartContext.Provider>

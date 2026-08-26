@@ -1,13 +1,36 @@
-// src/context/CartProvider.tsx
-import React, { useState, type ReactNode } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import type { Product, CartItem, PrescriptionData } from '../types/index';
 import { CartContext } from './CartContext';
+import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { user } = useAuth();
+  
+  // Dynamic storage key scoped to user ID or guest
+  const storageKey = user?.id ? `walters_cart_${user.id}` : 'walters_cart_guest';
+
+  // State initialization
+  const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Adjust state synchronously during render when storageKey changes (React-recommended pattern)
+  if (storageKey !== prevStorageKey) {
+    setPrevStorageKey(storageKey);
+    const saved = localStorage.getItem(storageKey);
+    setCartItems(saved ? JSON.parse(saved) : []);
+  }
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Synchronize internal React state out to localStorage (side-effect only)
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(cartItems));
+  }, [cartItems, storageKey]);
 
   // Default Option: Standard Non-Prescription Glasses
   const handleAddStandard = (product: Product) => {
@@ -63,7 +86,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSelectedProduct(null);
   };
 
-  const handleClearCart = () => setCartItems([]);
+  const handleClearCart = () => {
+    setCartItems([]);
+    localStorage.removeItem(storageKey);
+  };
 
   const handleRemoveItem = (index: number) => {
     setCartItems((prev) => prev.filter((_, i) => i !== index));

@@ -29,7 +29,7 @@ import { Profile } from './pages/Profile';
 import { Dashboard } from './pages/admin/Dashboard';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const { formatPrice } = useCurrency();
 
   const { 
@@ -40,6 +40,9 @@ const AppContent: React.FC = () => {
     handleCloseModal,
     handleClearCart
   } = useCart();
+
+  // Helper redirect target based on user role
+  const authenticatedRedirect = isAdmin ? "/admin/dashboard" : "/";
 
   return (
     <div className="min-h-screen bg-cream flex flex-col font-sans text-charcoal">
@@ -62,11 +65,21 @@ const AppContent: React.FC = () => {
           
           <Route path="/product/:id" element={<ProductDetail />} />
 
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
-          <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
+          <Route 
+            path="/login" 
+            element={isAuthenticated ? <Navigate to={authenticatedRedirect} replace /> : <Login />} 
+          />
+          <Route 
+            path="/register" 
+            element={isAuthenticated ? <Navigate to={authenticatedRedirect} replace /> : <Register />} 
+          />
+          
           <Route path="/checkout" element={<Checkout cartItems={cartItems} onClearCart={handleClearCart} />} />
           <Route path="/order-success/:orderId" element={<OrderSuccess />} />
           <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+
+          {/* Alias /admin to /admin/dashboard */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
           {/* Admin Protected Route */}
           <Route 

@@ -36,12 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (credentials: LoginPayload) => {
+  const login = async (credentials: LoginPayload): Promise<UserProfile> => {
     const res = await authApi.login(credentials);
     localStorage.setItem('walters_auth_token', res.access_token);
     
     const profile = await authApi.getMe();
     setUser(profile);
+    return profile;
   };
 
   const register = async (payload: SignupPayload) => {
@@ -57,13 +58,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider
       value={{
-        user,
-        isAuthenticated: !!user,
-        isAdmin: !!user?.is_admin,
-        loading,
-        login,
-        register,
-        logout,
+          user,
+          isAuthenticated: !!user,
+          isAdmin: user?.role === 'admin', // Derives admin status directly from backend role string
+          loading,
+          login,
+          register,
+          logout,
       }}
     >
       {children}

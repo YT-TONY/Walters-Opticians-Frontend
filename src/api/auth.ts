@@ -16,7 +16,7 @@ export interface UserProfile {
   id: number;
   email: string;
   full_name?: string;
-  is_admin: boolean;
+  role: 'admin' | 'customer'; 
   is_active: boolean;
 }
 

@@ -1,38 +1,36 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import type { Product, CartItem, PrescriptionData } from '../types/index';
 import { CartContext } from './CartContext';
+import { CartDrawer } from '../components/CartDrawer';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  
-  // Dynamic storage key scoped to user ID or guest
   const storageKey = user?.id ? `walters_cart_${user.id}` : 'walters_cart_guest';
 
-  // State initialization
   const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem(storageKey);
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Adjust state synchronously during render when storageKey changes (React-recommended pattern)
   if (storageKey !== prevStorageKey) {
     setPrevStorageKey(storageKey);
     const saved = localStorage.getItem(storageKey);
     setCartItems(saved ? JSON.parse(saved) : []);
   }
 
+  // Drawer & Modal State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Synchronize internal React state out to localStorage (side-effect only)
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cartItems));
   }, [cartItems, storageKey]);
 
-  // Default Option: Standard Non-Prescription Glasses
+  // Add standard item and auto-open drawer
   const handleAddStandard = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find(
@@ -46,9 +44,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return [...prev, { product, quantity: 1, purchaseType: 'standard' }];
     });
     toast.success(`${product.name} added to bag!`);
+    setIsDrawerOpen(true);
   };
 
-  // Frame Only (Demo Lenses)
+  // Add frame only and auto-open drawer
   const handleAddFrameOnly = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find(
@@ -62,14 +61,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return [...prev, { product, quantity: 1, purchaseType: 'frames_only' }];
     });
     toast.success(`${product.name} (Frame Only) added to bag!`);
+    setIsDrawerOpen(true);
   };
 
-  // Prescription Option (Triggers Modal)
   const handleSelectPrescription = (product: Product) => {
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
 
+  // Confirm prescription and auto-open drawer
   const handleConfirmPrescription = (prescription: PrescriptionData) => {
     if (!selectedProduct) return;
     setCartItems((prev) => [
@@ -79,6 +79,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsModalOpen(false);
     setSelectedProduct(null);
     toast.success(`Prescription lenses added for ${selectedProduct.name}!`);
+    setIsDrawerOpen(true);
   };
 
   const handleCloseModal = () => {
@@ -95,9 +96,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdateQuantity = (index: number, quantity: number) => {
+  // Quantity Delta updater (+1 or -1)
+  const handleUpdateQuantity = (index: number, delta: number) => {
     setCartItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, quantity } : item))
+      prev
+        .map((item, i) => {
+          if (i === index) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CartItem[]
     );
   };
 
@@ -105,6 +115,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <CartContext.Provider
       value={{
         cartItems,
+        isDrawerOpen,
+        setIsDrawerOpen,
         isModalOpen,
         selectedProduct,
         handleAddStandard,
@@ -118,6 +130,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }}
     >
       {children}
+      {/* Global Drawer mount */}
+      <CartDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        cartItems={cartItems}
+        onUpdateQty={handleUpdateQuantity}
+        onRemove={handleRemoveItem}
+      />
     </CartContext.Provider>
   );
 };

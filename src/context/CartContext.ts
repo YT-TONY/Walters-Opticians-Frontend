@@ -4,6 +4,8 @@ import type { Product, CartItem, PrescriptionData } from '../types/index';
 
 export interface CartContextType {
   cartItems: CartItem[];
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: (open: boolean) => void;
   isModalOpen: boolean;
   selectedProduct: Product | null;
   handleAddStandard: (product: Product) => void;
@@ -13,7 +15,7 @@ export interface CartContextType {
   handleCloseModal: () => void;
   handleClearCart: () => void;
   handleRemoveItem: (index: number) => void;
-  handleUpdateQuantity: (index: number, quantity: number) => void;
+  handleUpdateQuantity: (index: number, delta: number) => void;
 }
 
 export const CartContext = createContext<CartContextType | undefined>(undefined);

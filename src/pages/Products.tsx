@@ -1,4 +1,3 @@
-//src/pages/Products.tsx
 // src/pages/Products.tsx
 import React, { useEffect, useState, useMemo } from 'react';
 import type { Product, PrescriptionData } from '../types';

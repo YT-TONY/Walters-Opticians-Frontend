@@ -1,17 +1,39 @@
 // src/pages/Catalog.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiClient } from '../api/client';
 import type { Product } from '../types/index';
-import { ProductCard } from '../components/ProductCard';
+import { ProductCard, type ProductGroup } from '../components/ProductCard';
 import { useCart } from '../hooks/useCart';
 import { useCurrency } from '../hooks/useCurrency';
 import { toast } from 'sonner';
 
+const groupProductsByModel = (products: Product[]): ProductGroup[] => {
+  const groupMap = new Map<string, Product[]>();
+
+  products.forEach((product) => {
+    const groupKey =
+      product.model_code && product.model_code.trim() !== ''
+        ? product.model_code.toLowerCase().trim()
+        : `${product.brand.toLowerCase().trim()}-${product.name.toLowerCase().trim()}`;
+
+    if (!groupMap.has(groupKey)) {
+      groupMap.set(groupKey, []);
+    }
+    groupMap.get(groupKey)!.push(product);
+  });
+
+  return Array.from(groupMap.entries()).map(([key, variants]) => ({
+    groupKey: key,
+    defaultProduct: variants[0],
+    variants,
+  }));
+};
+
 export const Catalog: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  
+
   const { handleAddStandard, handleAddFrameOnly, handleSelectPrescription } = useCart();
   const { formatPrice } = useCurrency();
 
@@ -30,6 +52,10 @@ export const Catalog: React.FC = () => {
     };
     fetchProducts();
   }, []);
+
+  const productGroups = useMemo(() => {
+    return groupProductsByModel(products);
+  }, [products]);
 
   const handleAddToCart = (product: Product, option: string) => {
     switch (option.toLowerCase()) {
@@ -55,23 +81,23 @@ export const Catalog: React.FC = () => {
           Select a frame and add your custom prescription, or buy them frame-only.
         </p>
       </div>
-      
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div key={n} className="bg-gray-100 rounded-3xl h-80 animate-pulse border border-border"></div>
           ))}
         </div>
-      ) : products.length === 0 ? (
+      ) : productGroups.length === 0 ? (
         <div className="text-center py-20 text-slate">
           <p>No products available at the moment.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
+          {productGroups.map((group) => (
             <ProductCard
-              key={product.id}
-              product={product}
+              key={group.groupKey}
+              group={group}
               onAddToCart={handleAddToCart}
               formatPrice={formatPrice}
             />

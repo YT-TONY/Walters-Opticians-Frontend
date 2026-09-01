@@ -1,143 +1,219 @@
-// src/pages/admin/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../../api/client';
-import type { Product } from '../../types/index';
-import { Package, ShoppingCart, Edit3, Plus, Trash2 } from 'lucide-react';
+import { Package, ShoppingBag, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { type AdminProduct, type UKBookingRequest, type FrameShape, type FrameType } from '../../types/admin';
+import { useOrders } from '../../hooks/useOrder';
+import { StockInventoryTab } from './StockInventoryTab';
+import { OrdersTab } from './OrdersTab';
+import { BookingsTab } from './BookingsTab';
+import { ProductModal } from './ProductModal';
+import { productsApi, type BackendProduct } from '../../api/products';
 
-type Tab = 'products' | 'orders';
+// Helper transformers between Backend DB Models and Admin UI Models
+const mapBackendToAdminProduct = (p: BackendProduct): AdminProduct => ({
+  id: String(p.id),
+  name: p.name,
+  brand: p.brand,
+  color: p.color_description,
+  gender: 'unisex',
+  shape: (p.shape?.toLowerCase() as FrameShape) || 'round',
+  frameType: ((p as { frame_type?: string }).frame_type as FrameType) || 'full-rim',
+  price_full_gbp: p.price_full_gbp,
+  price_frame_only_gbp: p.price_frame_only_gbp,
+  stock: p.stock_quantity,
+  image_url: p.image_url,
+  gallery: p.image_url ? [p.image_url] : [],
+});
 
-export const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('products');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+const mapAdminToBackendCreate = (formData: Omit<AdminProduct, 'id'>) => ({
+  name: formData.name,
+  brand: formData.brand,
+  shape: formData.shape,
+  color_description: formData.color,
+  frame_type: formData.frameType || 'full-rim',
+  price_full_gbp: formData.price_full_gbp,
+  allow_frame_only: true,
+  price_frame_only_gbp: formData.price_frame_only_gbp,
+  image_url: formData.image_url || 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80',
+  stock_quantity: formData.stock,
+  is_active: true,
+  is_featured: false,
+});
+
+export const AdminDashboard: React.FC = () => {
+  const { orders } = useOrders();
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'bookings'>('products');
+
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [bookings, setBookings] = useState<UKBookingRequest[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
 
   useEffect(() => {
-    // 1. Defining and executing the fetch entirely inside the useEffect.
-    // 2. This prevents the linter from thinking we are executing synchronous state updates.
-    (async () => {
+    let isMounted = true;
+
+    const loadProducts = async () => {
       try {
-        const res = await apiClient.get('/products');
-        setProducts(res.data);
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load products.');
+        const dbProducts = await productsApi.getAll();
+        if (isMounted) {
+          setProducts(dbProducts.map(mapBackendToAdminProduct));
+        }
+      } catch (error) {
+        if (isMounted) {
+          toast.error('Failed to fetch product inventory from database.');
+          console.error(error);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setIsLoadingProducts(false);
+        }
       }
-    })();
+    };
+
+    loadProducts();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const toggleProductStatus = async (id: string | number, currentStatus: boolean) => {
-    try {
-      await apiClient.patch(`/products/${id}`, { is_active: !currentStatus });
-      setProducts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, is_active: !currentStatus } : p))
-      );
-      toast.success('Product status updated');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to update status');
+  const handleOpenAddModal = () => {
+    setEditingProduct(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (product: AdminProduct) => {
+    setEditingProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (confirm('Are you sure you want to remove this frame from inventory?')) {
+      try {
+        await productsApi.delete(id);
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+        toast.success('Frame successfully removed from inventory.');
+      } catch (error) {
+        toast.error('Failed to delete frame from database.');
+        console.error(error);
+      }
     }
   };
 
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="font-serif text-3xl font-bold text-[#021438]">Admin Portal</h1>
-          <p className="text-sm text-[#5E6470] mt-1">Manage catalog inventory and customer orders.</p>
-        </div>
-        
-        <div className="flex bg-[#F3F0E6] p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 ${
-              activeTab === 'products' ? 'bg-white shadow-sm text-[#021438]' : 'text-[#5E6470] hover:text-[#021438]'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>Products</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-6 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 ${
-              activeTab === 'orders' ? 'bg-white shadow-sm text-[#021438]' : 'text-[#5E6470] hover:text-[#021438]'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span>Orders</span>
-          </button>
-        </div>
-      </div>
+  const handleSaveProduct = async (formData: Omit<AdminProduct, 'id'>) => {
+    const payload = mapAdminToBackendCreate(formData);
 
-      {activeTab === 'products' && (
-        <div className="bg-white border border-[#E5E0D8] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#E5E0D8] flex justify-between items-center bg-[#FBFAF5]">
-            <h2 className="font-serif font-bold text-[#021438]">Product Inventory</h2>
-            <button className="bg-[#021438] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#E6AA38] hover:text-[#021438] transition-all flex items-center space-x-2">
-              <Plus className="w-4 h-4" />
-              <span>Add Frame</span>
+    try {
+      if (editingProduct) {
+        const updated = await productsApi.update(editingProduct.id, payload);
+        const adminProduct = mapBackendToAdminProduct(updated);
+        setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? adminProduct : p)));
+        toast.success('Frame updated successfully.');
+      } else {
+        const created = await productsApi.create(payload);
+        const adminProduct = mapBackendToAdminProduct(created);
+        setProducts((prev) => [adminProduct, ...prev]);
+        toast.success('New frame added to inventory and active store catalog.');
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      toast.error('Failed to save frame to database. Please check image format or backend connection.');
+      console.error(error);
+    }
+  };
+
+  const handleToggleBookingStatus = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === id
+          ? { ...b, status: b.status === 'Pending' ? 'Confirmed' : 'Pending' }
+          : b
+      )
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFBF7] text-charcoal font-sans antialiased pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
+          <div>
+            <h1 className="text-2xl font-bold text-navy tracking-tight">Admin Portal</h1>
+            <p className="text-xs text-slate mt-1">
+              Manage optical frame inventory, customer order fulfillment, and UK consultation bookings.
+            </p>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="inline-flex p-1 bg-offwhite rounded-xl border border-border">
+            <button
+              type="button"
+              onClick={() => setActiveTab('products')}
+              className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                activeTab === 'products' ? 'bg-navy text-white' : 'text-slate hover:text-navy'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Stock Inventory</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('orders')}
+              className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                activeTab === 'orders' ? 'bg-navy text-white' : 'text-slate hover:text-navy'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Orders & Prescriptions</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('bookings')}
+              className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                activeTab === 'bookings' ? 'bg-navy text-white' : 'text-slate hover:text-navy'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>UK Home Bookings</span>
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-[#5E6470]">
-              <thead className="bg-[#FAF8F5] text-xs uppercase font-semibold text-[#021438] border-b border-[#E5E0D8]">
-                <tr>
-                  <th className="px-6 py-4">Frame Name</th>
-                  <th className="px-6 py-4">Stock</th>
-                  <th className="px-6 py-4">Price (Full / Frame)</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E5E0D8]">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-8">Loading inventory...</td>
-                  </tr>
-                ) : (
-                  products.map((product) => (
-                    <tr key={product.id} className="hover:bg-[#FBFAF5] transition-colors">
-                      <td className="px-6 py-4 font-semibold text-[#021438]">{product.name}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${product.stock_quantity > 5 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {product.stock_quantity}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">£{product.price_full_gbp} / £{product.price_frame_only_gbp}</td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => toggleProductStatus(product.id, product.is_active || false)}
-                          className={`text-xs font-bold px-3 py-1 rounded-full border ${product.is_active ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
-                        >
-                          {product.is_active ? 'Active' : 'Draft'}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-right space-x-3">
-                        <button className="text-[#5E6470] hover:text-[#021438] transition-colors"><Edit3 className="w-4 h-4 inline" /></button>
-                        <button className="text-[#5E6470] hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4 inline" /></button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
         </div>
-      )}
 
-      {activeTab === 'orders' && (
-        <div className="bg-white border border-[#E5E0D8] rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[#E5E0D8] bg-[#FBFAF5]">
-            <h2 className="font-serif font-bold text-[#021438]">Customer Orders</h2>
-          </div>
-          <div className="p-16 text-center text-[#5E6470]">
-            <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-[#E5E0D8]" />
-            <p className="text-sm">Order tracking system requires connection to the backend endpoints.</p>
-          </div>
-        </div>
-      )}
+        {/* Tab Views */}
+        {activeTab === 'products' && (
+          isLoadingProducts ? (
+            <div className="flex items-center justify-center py-24 text-slate">
+              <Loader2 className="w-6 h-6 animate-spin mr-2 text-navy" />
+              <span className="text-xs font-semibold">Loading Database Inventory...</span>
+            </div>
+          ) : (
+            <StockInventoryTab
+              products={products}
+              onAddClick={handleOpenAddModal}
+              onEditClick={handleOpenEditModal}
+              onDeleteClick={handleDeleteProduct}
+            />
+          )
+        )}
+
+        {activeTab === 'orders' && <OrdersTab orders={orders} />}
+
+        {activeTab === 'bookings' && (
+          <BookingsTab bookings={bookings} onToggleStatus={handleToggleBookingStatus} />
+        )}
+      </div>
+
+      {/* Modal */}
+      <ProductModal
+        isOpen={isModalOpen}
+        editingProduct={editingProduct}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveProduct}
+      />
     </div>
   );
 };

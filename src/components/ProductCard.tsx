@@ -1,7 +1,8 @@
 // src/components/ProductCard.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ChevronDown } from 'lucide-react';
+import { Loader2, ChevronDown, Shield } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import type { Product } from '../types/index';
 
 interface ProductCardProps {
@@ -16,8 +17,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   formatPrice,
 }) => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+
+  const isOutOfStock = product.stock_quantity <= 0;
 
   const handleCardClick = () => {
     navigate(`/product/${product.id}`);
@@ -26,7 +30,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const handleOptionChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     e.stopPropagation();
     const value = e.target.value;
-    if (!value) return;
+    if (!value || isOutOfStock) return;
 
     setSelectedOption(value);
     setLoading(true);
@@ -55,12 +59,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       onClick={handleCardClick}
       className="group relative cursor-pointer flex flex-col bg-[#F6F4EE] border border-[#E2DBD0] rounded-sm transition-all duration-300 shadow-sm hover:shadow-md overflow-hidden"
     >
-      {/* Product Image Container (Changed to aspect-square to reduce excessive height) */}
+      {/* Product Image Container */}
       <div className="relative w-full aspect-square bg-transparent overflow-hidden">
+        {/* Out of Stock Red Banner Overlay */}
+        {isOutOfStock && (
+          <div className="absolute top-2.5 left-2.5 z-10 px-2.5 py-1 bg-red-600 text-white text-[10px] font-bold tracking-wider uppercase rounded-xs shadow-xs">
+            Out of Stock
+          </div>
+        )}
+
         <img
           src={product.image_url || ''}
           alt={product.name}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+          className={`w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-500 ease-out ${
+            isOutOfStock ? 'grayscale opacity-60' : ''
+          }`}
         />
       </div>
 
@@ -82,9 +95,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </p>
         </div>
 
-        {/* Add to Bag / Select Dropdown */}
+        {/* Add to Bag / Select Dropdown / Out of Stock Pill */}
         <div className="relative w-full" onClick={(e) => e.stopPropagation()}>
-          {loading ? (
+          {isOutOfStock ? (
+            /* Out of Stock Disabled Button */
+            <div className="w-full h-10 bg-slate-100 border border-slate-200 text-slate-400 text-xs font-semibold rounded-full flex items-center justify-center cursor-not-allowed">
+              Out of Stock
+            </div>
+          ) : isAdmin ? (
+            /* Admin View State (Shopping Disabled) */
+            <div className="w-full h-10 bg-offwhite border border-border rounded-full flex items-center justify-center space-x-1.5 text-navy text-xs font-semibold">
+              <Shield className="w-3.5 h-3.5 text-gold" />
+              <span>Admin Preview Mode</span>
+            </div>
+          ) : loading ? (
             /* Loading State (Matches grey pill with spinner) */
             <div className="w-full h-10 bg-[#636267] rounded-full flex items-center justify-center text-white transition-colors duration-200">
               <Loader2 className="w-5 h-5 animate-spin" />

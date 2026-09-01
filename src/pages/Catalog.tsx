@@ -1,4 +1,5 @@
 // src/pages/Catalog.tsx
+
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 import type { Product } from '../types/index';
@@ -18,7 +19,7 @@ export const Catalog: React.FC = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await apiClient.get<Product[]>('/products');
+        const res = await apiClient.get<Product[]>('/products/');
         setProducts(res.data);
       } catch (error) {
         console.error('Failed to fetch products', error);

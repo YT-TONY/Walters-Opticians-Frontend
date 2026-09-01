@@ -1,3 +1,4 @@
+//src/App.tsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
@@ -9,6 +10,7 @@ import { AuthProvider } from './context/AuthProvider';
 import { CurrencyProvider } from './context/CurrencyProvider';
 import { CategoryProvider } from './context/CategoryProvider';
 import { CartProvider } from './context/CartProvider';
+import { OrderProvider } from './context/OrderProvider';
 
 // Layout & UI Components
 import { Navbar } from './components/Navbar';
@@ -23,10 +25,11 @@ import { Catalog } from './pages/Catalog';
 import { ProductDetail } from './pages/ProductDetail';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { Cart } from './pages/CartPage';
 import { Checkout } from './pages/Checkout';
 import { OrderSuccess } from './pages/OrderSucess';
 import { Profile } from './pages/Profile';
-import { Dashboard } from './pages/admin/Dashboard';
+import { AdminDashboard } from './pages/admin/Dashboard';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -65,6 +68,9 @@ const AppContent: React.FC = () => {
           
           <Route path="/product/:id" element={<ProductDetail />} />
 
+          {/* Cart Route (Consumes useCart directly in CartPage) */}
+          <Route path="/cart" element={<Cart />} />
+
           <Route 
             path="/login" 
             element={isAuthenticated ? <Navigate to={authenticatedRedirect} replace /> : <Login />} 
@@ -86,7 +92,7 @@ const AppContent: React.FC = () => {
             path="/admin/dashboard" 
             element={
               <ProtectedRoute requireAdmin={true}>
-                <Dashboard />
+                <AdminDashboard />
               </ProtectedRoute>
             } 
           />
@@ -116,7 +122,9 @@ export const App: React.FC = () => {
         <CurrencyProvider>
           <CategoryProvider>
             <CartProvider>
-              <AppContent />
+              <OrderProvider>
+                <AppContent />
+              </OrderProvider>
             </CartProvider>
           </CategoryProvider>
         </CurrencyProvider>

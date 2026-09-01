@@ -1,7 +1,7 @@
 // src/pages/ProductDetail.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ShoppingBag, ArrowLeft, ShieldCheck, Truck, RefreshCw, Loader2 } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ShoppingBag, ArrowLeft, ShieldCheck, Truck, RefreshCw, Loader2, Check } from 'lucide-react';
 import axios from 'axios';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCart } from '../hooks/useCart';
@@ -9,10 +9,12 @@ import type { Product } from '../types/index';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { formatPrice } = useCurrency();
   const { handleAddStandard, handleAddFrameOnly, handleSelectPrescription } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [colorVariants, setColorVariants] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,22 +22,34 @@ export const ProductDetail: React.FC = () => {
   const [activeImage, setActiveImage] = useState<string>('');
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndVariants = async () => {
       try {
         setLoading(true);
         setError(null);
         
         const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
         const response = await axios.get<Product>(`${API_URL}/products/${id}`);
-        
-        const data = response.data;
-        setProduct(data);
+        const currentProduct = response.data;
+        setProduct(currentProduct);
 
-        // Safely determine initial active image string
-        const fallbackImg = data.image_url || '';
-        const firstGalleryImg = Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : undefined;
-        
+        // Set primary active image
+        const fallbackImg = currentProduct.image_url || '';
+        const firstGalleryImg = Array.isArray(currentProduct.gallery) && currentProduct.gallery.length > 0 
+          ? currentProduct.gallery[0] 
+          : undefined;
         setActiveImage(firstGalleryImg ?? fallbackImg);
+
+        // Fetch sibling color variants matching the same model
+        const allProductsRes = await axios.get<Product[]>(`${API_URL}/products`);
+        const siblings = allProductsRes.data.filter((p) => {
+          if (currentProduct.model_code && p.model_code) {
+            return p.model_code === currentProduct.model_code;
+          }
+          return p.name.toLowerCase() === currentProduct.name.toLowerCase() && 
+                 p.brand.toLowerCase() === currentProduct.brand.toLowerCase();
+        });
+
+        setColorVariants(siblings);
       } catch (err) {
         console.error('Error fetching product details:', err);
         setError('Unable to load frame details. Please check your connection.');
@@ -45,7 +59,7 @@ export const ProductDetail: React.FC = () => {
     };
 
     if (id) {
-      fetchProduct();
+      fetchProductAndVariants();
     }
   }, [id]);
 
@@ -90,10 +104,9 @@ export const ProductDetail: React.FC = () => {
     );
   }
 
-  // Explicitly build a guaranteed string[] with no undefined values
   const productImages: string[] = (
-    Array.isArray(product.images) && product.images.length > 0
-      ? product.images.filter((img): img is string => typeof img === 'string' && img.length > 0)
+    Array.isArray(product.gallery) && product.gallery.length > 0
+      ? product.gallery.filter((img): img is string => typeof img === 'string' && img.length > 0)
       : [product.image_url]
   ).filter((img): img is string => typeof img === 'string' && img.length > 0);
 
@@ -116,7 +129,7 @@ export const ProductDetail: React.FC = () => {
               <img
                 src={activeImage || product.image_url}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain p-4"
               />
             </div>
             
@@ -125,12 +138,13 @@ export const ProductDetail: React.FC = () => {
                 {productImages.map((img: string, idx: number) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => setActiveImage(img)}
-                    className={`relative w-20 h-20 rounded-lg overflow-hidden border transition-all ${
+                    className={`relative w-20 h-20 rounded-lg overflow-hidden border transition-all cursor-pointer ${
                       activeImage === img ? 'border-walters-navy ring-1 ring-walters-navy' : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={img} alt="" className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
@@ -138,10 +152,10 @@ export const ProductDetail: React.FC = () => {
           </div>
 
           {/* RIGHT: Product Details & Purchase Form */}
-          <div className="lg:col-span-5 space-y-8">
+          <div className="lg:col-span-5 space-y-6">
             <div className="border-b border-charcoal/10 pb-6 space-y-2">
               <span className="text-xs font-light tracking-widest text-walters-navy/60 uppercase">
-                {product.category || 'Handcrafted Frames'}
+                {product.brand}
               </span>
               <h1 className="font-serif text-3xl sm:text-4xl font-normal text-walters-navy tracking-tight">
                 {product.name}
@@ -151,10 +165,42 @@ export const ProductDetail: React.FC = () => {
               </p>
             </div>
 
-            {product.description && (
-              <p className="text-sm font-light leading-relaxed text-walters-charcoal/80">
-                {product.description}
-              </p>
+            {/* COLOR VARIANTS SELECTOR */}
+            {colorVariants.length > 1 && (
+              <div className="space-y-3 pt-1 border-b border-charcoal/10 pb-6">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-light uppercase tracking-wider text-walters-charcoal/70">
+                    Frame Color: <span className="font-semibold text-walters-navy">{product.color_description}</span>
+                  </label>
+                  <span className="text-[11px] text-walters-charcoal/50">{colorVariants.length} Colorways</span>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5">
+                  {colorVariants.map((variant) => {
+                    const isSelected = String(variant.id) === String(product.id);
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        onClick={() => navigate(`/product/${variant.id}`)}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-xl border text-xs transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-walters-navy bg-white shadow-sm text-walters-navy font-semibold'
+                            : 'border-charcoal/10 bg-transparent text-walters-charcoal/70 hover:border-charcoal/30'
+                        }`}
+                      >
+                        <div className="w-4 h-4 rounded-full border border-charcoal/20 overflow-hidden shrink-0 bg-walters-cream">
+                          {variant.image_url && (
+                            <img src={variant.image_url} alt="" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                        <span>{variant.color_description}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-walters-navy shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Option Selectors */}
@@ -209,6 +255,7 @@ export const ProductDetail: React.FC = () => {
                     <div className="text-sm font-light text-walters-navy">Frames Only</div>
                     <div className="text-xs font-light text-walters-charcoal/50">Demo lenses fitted</div>
                   </div>
+                  <span className="text-xs font-light">{formatPrice(product.price_frame_only_gbp)}</span>
                 </button>
               </div>
             </div>
@@ -217,13 +264,13 @@ export const ProductDetail: React.FC = () => {
             <button
               type="button"
               onClick={handleBagSubmit}
-              className="w-full flex items-center justify-center space-x-3 bg-walters-navy text-white text-sm font-light tracking-wide py-4 rounded-full hover:bg-walters-navy/90 transition-colors shadow-md"
+              className="w-full flex items-center justify-center space-x-3 bg-walters-navy text-white text-sm font-light tracking-wide py-4 rounded-full hover:bg-walters-navy/90 transition-colors shadow-md cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4 stroke-[1.5]" />
-              <span>Add to Bag — {formatPrice(product.price_full_gbp)}</span>
+              <span>Add to Bag — {formatPrice(selectedOption === 'frames_only' ? product.price_frame_only_gbp : product.price_full_gbp)}</span>
             </button>
 
-            {/* Product Specifications & Perks */}
+            {/* Specifications & Perks */}
             <div className="border-t border-charcoal/10 pt-6 space-y-4 text-xs font-light text-walters-charcoal/80">
               <div className="flex items-center space-x-3">
                 <Truck className="w-4 h-4 text-walters-navy/70 stroke-[1.5]" />

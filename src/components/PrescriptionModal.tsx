@@ -1,3 +1,4 @@
+//src/components/PrescriptionModal.tsx
 import React, { useState } from 'react';
 import type { PrescriptionData } from '../types';
 

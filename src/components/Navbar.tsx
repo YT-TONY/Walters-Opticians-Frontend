@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Phone, Menu, X, Globe, Search, ChevronRight, LogOut, Shield } from 'lucide-react';
+import { ShoppingBag, User, Phone, Menu, X, Globe, Search, ChevronRight, Shield, LogOut } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCategories } from '../hooks/useCategories';
@@ -40,12 +40,14 @@ export const Navbar: React.FC = () => {
   }, [totalItemCount]);
 
   const handleOpenMegaMenu = (catId?: number) => {
+    if (isAdmin) return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (catId) setActiveCategoryId(catId);
     setIsMegaMenuOpen(true);
   };
 
   const handleCategoryMouseLeave = () => {
+    if (isAdmin) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setIsMegaMenuOpen(false);
       setActiveCategoryId(null);
@@ -70,6 +72,7 @@ export const Navbar: React.FC = () => {
 
   // Single Click: Open Drawer | Double Click: Navigate to Cart Page
   const handleCartClick = () => {
+    if (isAdmin) return;
     if (clickTimerRef.current) return;
 
     clickTimerRef.current = setTimeout(() => {
@@ -80,6 +83,7 @@ export const Navbar: React.FC = () => {
   };
 
   const handleCartDoubleClick = () => {
+    if (isAdmin) return;
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -115,59 +119,71 @@ export const Navbar: React.FC = () => {
             <span>+44 (0)1427 616506</span>
           </a>
 
-          {/* Desktop Hamburger Icon */}
-          <button
-            type="button"
-            onMouseEnter={() => handleOpenMegaMenu()}
-            onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
-            className="hidden md:flex items-center justify-center p-1.5 rounded text-walters-navy hover:text-walters-gold transition-colors cursor-pointer"
-            aria-label="Toggle Categories Mega Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {/* Desktop Hamburger Icon - Hidden for Admin */}
+          {!isAdmin && (
+            <button
+              type="button"
+              onMouseEnter={() => handleOpenMegaMenu()}
+              onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+              className="hidden md:flex items-center justify-center p-1.5 rounded text-walters-navy hover:text-walters-gold transition-colors cursor-pointer"
+              aria-label="Toggle Categories Mega Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {/* CENTER: Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative w-full">
-            <input
-              type="text"
-              placeholder="Find more Products.........."
-              className="w-full bg-white/80 border border-walters-border rounded-full py-2 pl-10 pr-4 text-xs text-walters-charcoal placeholder-walters-slate/60 focus:outline-none focus:ring-1 focus:ring-walters-gold focus:bg-white transition-all"
-            />
-            <Search className="w-4 h-4 text-walters-slate/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        {/* CENTER: Search Bar - Hidden for Admin */}
+        {!isAdmin && (
+          <div className="hidden md:flex flex-1 max-w-md mx-4">
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Find more Products.........."
+                className="w-full bg-white/80 border border-walters-border rounded-full py-2 pl-10 pr-4 text-xs text-walters-charcoal placeholder-walters-slate/60 focus:outline-none focus:ring-1 focus:ring-walters-gold focus:bg-white transition-all"
+              />
+              <Search className="w-4 h-4 text-walters-slate/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* RIGHT: Actions */}
         <div className="flex items-center space-x-3 sm:space-x-4">
           {isAuthenticated ? (
             <>
-              {isAdmin && (
+              {isAdmin ? (
+                <>
+                  <Link
+                    to="/admin"
+                    onClick={closeMegaMenu}
+                    className="hidden xl:flex items-center space-x-1 text-xs font-bold text-walters-gold hover:text-walters-navy transition-colors"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Admin</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="hidden sm:flex items-center space-x-1.5 text-xs font-semibold text-walters-slate hover:text-rose-600 transition-colors cursor-pointer"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </>
+              ) : (
+                /* Customer Profile Link */
                 <Link
-                  to="/admin"
+                  to="/profile"
                   onClick={closeMegaMenu}
-                  className="hidden xl:flex items-center space-x-1 text-xs font-bold text-walters-gold hover:text-walters-navy transition-colors"
+                  className="hidden sm:flex items-center space-x-1.5 text-xs font-semibold text-walters-navy hover:text-walters-gold transition-colors cursor-pointer"
+                  title="View Profile & Orders"
                 >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Admin</span>
+                  <User className="w-4 h-4 text-walters-navy shrink-0" />
+                  <span className="max-w-30 truncate">{user?.full_name || 'Account'}</span>
                 </Link>
               )}
-
-              <span className="hidden sm:flex items-center space-x-1.5 text-xs font-medium text-walters-charcoal opacity-90">
-                <User className="w-4 h-4 text-walters-navy shrink-0" />
-                <span className="max-w-30 truncate">{user?.full_name || 'Account'}</span>
-              </span>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="hidden sm:flex items-center space-x-1 text-xs font-medium text-walters-slate hover:text-red-600 opacity-80 hover:opacity-100 transition-colors cursor-pointer"
-                title="Sign Out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
             </>
           ) : (
             <Link
@@ -195,27 +211,29 @@ export const Navbar: React.FC = () => {
             </select>
           </div>
 
-          {/* DYNAMIC BAG BUTTON (Single Click = Drawer | Double Click = Page) */}
-          <button
-            type="button"
-            onClick={handleCartClick}
-            onDoubleClick={handleCartDoubleClick}
-            className="relative flex items-center space-x-2 bg-white text-walters-navy text-xs font-medium px-4 py-2 rounded-full cursor-pointer border border-walters-border hover:border-walters-navy transition-colors"
-            aria-label="Shopping Bag Drawer"
-          >
-            <ShoppingBag className="w-3.5 h-3.5 text-walters-navy" />
-            <span>Bag</span>
+          {/* DYNAMIC BAG BUTTON - Hidden for Admin */}
+          {!isAdmin && (
+            <button
+              type="button"
+              onClick={handleCartClick}
+              onDoubleClick={handleCartDoubleClick}
+              className="relative flex items-center space-x-2 bg-white text-walters-navy text-xs font-medium px-4 py-2 rounded-full cursor-pointer border border-walters-border hover:border-walters-navy transition-colors"
+              aria-label="Shopping Bag Drawer"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-walters-navy" />
+              <span>Bag</span>
 
-            {totalItemCount > 0 && (
-              <span
-                className={`absolute -top-1.5 -right-1.5 bg-walters-navy text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full border border-white flex items-center justify-center transition-transform duration-200 ${
-                  animateBadge ? 'scale-125' : 'scale-100'
-                }`}
-              >
-                {totalItemCount}
-              </span>
-            )}
-          </button>
+              {totalItemCount > 0 && (
+                <span
+                  className={`absolute -top-1.5 -right-1.5 bg-walters-navy text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full border border-white flex items-center justify-center transition-transform duration-200 ${
+                    animateBadge ? 'scale-125' : 'scale-100'
+                  }`}
+                >
+                  {totalItemCount}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
             type="button"
@@ -231,60 +249,72 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* MEGA MENU OVERLAY */}
-      <MegaMenu
-        isOpen={isMegaMenuOpen}
-        activeCategoryId={activeCategoryId}
-        categories={categories}
-        onCategoryHover={(id) => setActiveCategoryId(id)}
-        onClose={closeMegaMenu}
-        onMouseEnter={() => {
-          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-        }}
-        onMouseLeave={handleCategoryMouseLeave}
-      />
+      {/* MEGA MENU OVERLAY - Hidden for Admin */}
+      {!isAdmin && (
+        <MegaMenu
+          isOpen={isMegaMenuOpen}
+          activeCategoryId={activeCategoryId}
+          categories={categories}
+          onCategoryHover={(id) => setActiveCategoryId(id)}
+          onClose={closeMegaMenu}
+          onMouseEnter={() => {
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+          }}
+          onMouseLeave={handleCategoryMouseLeave}
+        />
+      )}
 
       {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-walters-cream px-6 pt-2 pb-6 space-y-4 border-t border-walters-border/40 max-h-[80vh] overflow-y-auto">
-          <div className="relative w-full pt-2">
-            <input
-              type="text"
-              placeholder="Find more Products.........."
-              className="w-full bg-white border border-walters-border rounded-full py-2 pl-10 pr-4 text-xs text-walters-charcoal"
-            />
-            <Search className="w-4 h-4 text-walters-slate/60 absolute left-3.5 top-1/2 -translate-y-1/2 mt-1" />
-          </div>
+          {!isAdmin && (
+            <div className="relative w-full pt-2">
+              <input
+                type="text"
+                placeholder="Find more Products.........."
+                className="w-full bg-white border border-walters-border rounded-full py-2 pl-10 pr-4 text-xs text-walters-charcoal"
+              />
+              <Search className="w-4 h-4 text-walters-slate/60 absolute left-3.5 top-1/2 -translate-y-1/2 mt-1" />
+            </div>
+          )}
 
           <nav className="flex flex-col space-y-3 font-sans text-base font-medium">
             <div className="pb-3 border-b border-walters-border/30 space-y-2">
               {isAuthenticated ? (
                 <>
-                  <div className="flex items-center space-x-2 text-xs font-bold text-walters-navy">
-                    <User className="w-4 h-4" />
-                    <span>{user?.full_name || user?.email}</span>
-                  </div>
-                  {isAdmin && (
+                  {isAdmin ? (
+                    <>
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center space-x-2 text-xs font-bold text-walters-gold hover:underline py-1"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Admin Dashboard</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex items-center space-x-2 text-xs font-medium text-rose-600 py-1 cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </>
+                  ) : (
                     <Link
-                      to="/admin"
+                      to="/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 text-xs font-bold text-walters-gold hover:underline py-1"
+                      className="flex items-center space-x-2 text-xs font-bold text-walters-navy hover:text-walters-gold py-1"
                     >
-                      <Shield className="w-4 h-4" />
-                      <span>Admin Dashboard</span>
+                      <User className="w-4 h-4" />
+                      <span>{user?.full_name || user?.email || 'My Profile'}</span>
                     </Link>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      handleLogout();
-                    }}
-                    className="flex items-center space-x-2 text-xs font-medium text-red-600 py-1"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
-                  </button>
                 </>
               ) : (
                 <Link

@@ -1,3 +1,4 @@
+//src/hooks/useCurrency.ts
 import { useContext } from 'react';
 import { CurrencyContext } from '../context/CurrencyContext';
 

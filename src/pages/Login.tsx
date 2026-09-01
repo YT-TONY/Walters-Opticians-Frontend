@@ -1,10 +1,11 @@
-// src/pages/Login.tsx
+//src/pages/Register.tsx
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 import { ArrowRight, Lock, Mail } from 'lucide-react';
-import { WavyDivider } from '../components/wavyDivider';
+import { WavyDivider } from '../components/WavyDivider';
 
 interface ApiErrorResponse {
   response?: { data?: { detail?: string } };
@@ -18,6 +19,11 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -27,13 +33,22 @@ export const Login: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      await login({ email, password });
+      const loggedInUser = await login({ email, password });
       toast.success('Welcome back to Walters Opticians!');
-      navigate('/');
+
+      // Reset fields to blank state
+      resetForm();
+
+      if (loggedInUser.role === 'admin' || (loggedInUser as { is_admin?: boolean }).is_admin) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err: unknown) {
       const error = err as ApiErrorResponse;
       const errorMsg = error.response?.data?.detail || 'Invalid email or password.';
       toast.error(errorMsg);
+      setPassword(''); // Clear invalid password on failure
     } finally {
       setIsSubmitting(false);
     }
@@ -41,18 +56,14 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-walters-cream text-walters-charcoal overflow-x-hidden font-sans">
-      
-      {/* LEFT PANEL: 38vw Viewport Width, Solid Navy, Pure White Text */}
+      {/* LEFT PANEL */}
       <div className="relative w-full md:w-[38vw] bg-walters-navy text-white min-h-[45vh] md:min-h-screen p-8 sm:p-12 lg:p-16 flex flex-col justify-between shrink-0 z-20 shadow-2xl">
-        
-        {/* Top Header Branding */}
         <div className="relative z-10">
           <span className="font-sans tracking-[0.25em] text-white text-xs font-bold uppercase">
             WALTERS OPTICIANS
           </span>
         </div>
 
-        {/* Main Playfair Display Serif Headline */}
         <div className="my-auto py-12 relative z-10 space-y-6">
           <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-normal leading-[1.15] text-white tracking-normal">
             Precision eyewear, <br />
@@ -63,7 +74,6 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        {/* Bottom Tagline */}
         <div className="relative z-10 space-y-1">
           <p className="font-serif tracking-[0.2em] text-white text-sm font-bold uppercase">
             WALTERS OPTICIANS
@@ -73,19 +83,14 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        {/* INDEPENDENT MULTI-LAYERED WAVY SVG COMPONENT (~10% VW OVERLAP) */}
         <WavyDivider />
-
       </div>
 
-      {/* RIGHT PANEL: 62vw Full Screen Form (No Cards) */}
+      {/* RIGHT PANEL */}
       <div className="w-full md:w-[62vw] bg-walters-cream flex items-center justify-center p-8 sm:p-16 lg:p-24 relative z-10 min-h-[55vh] md:min-h-screen">
-        
-        {/* Warm Golden Backdrop Gradient */}
         <div className="absolute top-1/3 right-12 w-md h-112 bg-walters-gold/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="w-full max-w-sm mx-auto space-y-8 relative z-10">
-          
           <div className="space-y-2">
             <h2 className="font-serif text-4xl font-normal text-walters-navy tracking-tight">
               Sign in
@@ -157,10 +162,8 @@ export const Login: React.FC = () => {
               </Link>
             </p>
           </div>
-
         </div>
       </div>
-
     </div>
   );
 };

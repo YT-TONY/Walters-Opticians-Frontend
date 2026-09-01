@@ -12,7 +12,8 @@ import {
   Store,
   Bookmark,
   Trash2,
-  Edit3
+  Edit3,
+  AlertTriangle
 } from 'lucide-react';
 
 export const Cart: React.FC = () => {
@@ -41,12 +42,13 @@ export const Cart: React.FC = () => {
       : item.product.price_frame_only_gbp;
 
   const rawSubtotal = cartItems.reduce(
-    (acc, item) => acc + getItemPrice(item) * item.quantity,
+    (acc, item) => (item.product.stock_quantity > 0 ? acc + getItemPrice(item) * item.quantity : acc),
     0
   );
 
   const discountAmount = promoCheckbox ? rawSubtotal * 0.1 : appliedDiscount;
   const finalSubtotal = Math.max(0, rawSubtotal - discountAmount);
+  const hasUnavailableItems = cartItems.some((item) => item.product.stock_quantity <= 0);
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,21 +60,21 @@ export const Cart: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] py-10 px-4 sm:px-6 lg:px-8 font-sans text-[#1A1A1A] antialiased">
+    <div className="min-h-screen bg-walters-cream py-10 px-4 sm:px-6 lg:px-8 font-sans text-walters-charcoal antialiased">
       <div className="max-w-6xl mx-auto">
         
         {/* Header */}
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#021438] mb-6">
-          Your Basket <span className="text-base font-normal text-[#5E6470] tabular-nums">({cartItems.length} items)</span>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-walters-navy mb-6">
+          Your Basket <span className="text-base font-normal text-walters-slate tabular-nums">({cartItems.length} items)</span>
         </h1>
 
         {cartItems.length === 0 && savedItems.length === 0 ? (
-          <div className="bg-white border border-[#E5E0D8] rounded-2xl p-12 text-center space-y-4">
-            <h2 className="text-xl font-semibold text-[#021438]">Your shopping basket is empty</h2>
-            <p className="text-sm text-[#5E6470]">Discover hand-crafted optical frames tailored specifically for your vision.</p>
+          <div className="bg-white border border-walters-border rounded-2xl p-12 text-center space-y-4">
+            <h2 className="text-xl font-semibold text-walters-navy">Your shopping basket is empty</h2>
+            <p className="text-sm text-walters-slate">Discover hand-crafted optical frames tailored specifically for your vision.</p>
             <Link
               to="/catalog"
-              className="inline-block px-6 py-3 bg-[#021438] text-white text-xs font-semibold tracking-wider uppercase rounded-full hover:bg-[#E6AA38] hover:text-[#021438] transition-all"
+              className="inline-block px-6 py-3 bg-walters-navy text-white text-xs font-semibold tracking-wider uppercase rounded-full hover:bg-walters-gold hover:text-walters-navy transition-all"
             >
               Browse Catalog
             </Link>
@@ -84,26 +86,26 @@ export const Cart: React.FC = () => {
             <div className="lg:col-span-8 space-y-6">
               
               {cartItems.length > 0 && (
-                <div className="bg-white border border-[#E5E0D8] rounded-xl shadow-xs overflow-hidden">
+                <div className="bg-white border border-walters-border rounded-xl shadow-xs overflow-hidden">
                   
                   {/* Store Header */}
-                  <div className="p-4 sm:p-5 border-b border-[#E5E0D8] bg-[#FBFAF5] flex items-center justify-between">
+                  <div className="p-4 sm:p-5 border-b border-walters-border bg-walters-offwhite flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Store className="w-4 h-4 text-[#021438]" />
-                      <span className="font-semibold text-xs tracking-wide uppercase text-[#021438]">
+                      <Store className="w-4 h-4 text-walters-navy" />
+                      <span className="font-semibold text-xs tracking-wide uppercase text-walters-navy">
                         Walters Opticians Flagship
                       </span>
                     </div>
                   </div>
 
                   {/* Promo Banner */}
-                  <div className="px-5 py-3 bg-[#FFFBF0] border-b border-[#F0E6D2] flex items-center space-x-3 text-xs text-[#021438]">
+                  <div className="px-5 py-3 bg-amber-50/50 border-b border-amber-200/60 flex items-center space-x-3 text-xs text-walters-navy">
                     <input
                       type="checkbox"
                       id="shop-promo"
                       checked={promoCheckbox}
                       onChange={(e) => setPromoCheckbox(e.target.checked)}
-                      className="rounded border-[#E5E0D8] text-[#021438] focus:ring-[#021438] cursor-pointer"
+                      className="rounded border-walters-border text-walters-navy focus:ring-walters-navy cursor-pointer"
                     />
                     <label htmlFor="shop-promo" className="cursor-pointer font-medium">
                       Apply 10% store discount with promo code <span className="font-bold">PROMO</span>
@@ -111,15 +113,26 @@ export const Cart: React.FC = () => {
                   </div>
 
                   {/* Items List */}
-                  <div className="divide-y divide-[#E5E0D8]">
+                  <div className="divide-y divide-walters-border">
                     {cartItems.map((item, idx) => {
                       const itemPrice = getItemPrice(item);
+                      const isOutOfStock = item.product.stock_quantity <= 0;
+                      const maxSelectable = Math.min(10, item.product.stock_quantity || 0);
+                      const optionsList = Array.from({ length: maxSelectable }, (_, i) => i + 1);
 
                       return (
-                        <div key={idx} className="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
-                          
-                          {/* Image Thumbnail */}
-                          <div className="w-24 h-24 bg-[#F8F6F0] rounded-lg p-2 shrink-0 flex items-center justify-center border border-[#E5E0D8]">
+                        <div
+                          key={idx}
+                          className={`p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 transition-all ${
+                            isOutOfStock ? 'bg-red-50/20' : ''
+                          }`}
+                        >
+                          {/* Image Thumbnail with Isolated Grayscale */}
+                          <div
+                            className={`w-24 h-24 bg-walters-cream rounded-lg p-2 shrink-0 flex items-center justify-center border border-walters-border ${
+                              isOutOfStock ? 'grayscale opacity-60' : ''
+                            }`}
+                          >
                             {item.product.image_url ? (
                               <img
                                 src={item.product.image_url}
@@ -127,7 +140,7 @@ export const Cart: React.FC = () => {
                                 className="object-contain max-h-full"
                               />
                             ) : (
-                              <span className="text-xl font-bold text-[#021438]/30">
+                              <span className="text-xl font-bold text-walters-navy/30">
                                 {item.product.name[0]}
                               </span>
                             )}
@@ -137,57 +150,66 @@ export const Cart: React.FC = () => {
                           <div className="flex-1 space-y-2">
                             <div className="flex justify-between items-start gap-2">
                               <div>
-                                <h3 className="font-semibold text-base text-[#021438] leading-tight">
+                                <h3 className="font-semibold text-base text-walters-navy leading-tight">
                                   {item.product.name}
                                 </h3>
-                                <p className="text-xs text-[#5E6470] mt-0.5">
+                                <p className="text-xs text-walters-slate mt-0.5">
                                   {item.product.brand} • {item.product.color_description}
                                 </p>
                               </div>
-                              <span className="font-semibold text-base text-[#021438] tabular-nums shrink-0">
+                              <span className="font-semibold text-base text-walters-navy tabular-nums shrink-0">
                                 {formatPrice(itemPrice * item.quantity)}
                               </span>
                             </div>
 
-                            {/* Lens Type Badge */}
-                            <div>
-                              <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-[#F3F0E6] text-[#021438]">
-                                {item.purchaseType === 'prescription'
-                                  ? 'Full Prescription Lenses'
-                                  : 'Frames Only (Demo Lenses)'}
-                              </span>
-                            </div>
-
-                            {/* Urgency Badge */}
-                            <div className="text-[11px] font-medium text-amber-800 bg-amber-50/80 inline-block px-2 py-0.5 rounded border border-amber-200">
-                              Popular item — reserved for current checkout session
-                            </div>
+                            {/* Status Badges */}
+                            {isOutOfStock ? (
+                              <div className="inline-flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Currently unavailable</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-walters-offwhite text-walters-navy">
+                                  {item.purchaseType === 'prescription'
+                                    ? 'Full Prescription Lenses'
+                                    : 'Frames Only (Demo Lenses)'}
+                                </span>
+                                <div className="text-[11px] font-medium text-amber-800 bg-amber-50/80 inline-block px-2 py-0.5 rounded border border-amber-200">
+                                  Popular item — {item.product.stock_quantity} units available in stock
+                                </div>
+                              </div>
+                            )}
 
                             {/* Controls Row */}
-                            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-medium text-[#021438]">
-                              
-                              {/* Uniform Quantity Dropdown */}
+                            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-medium text-walters-navy">
+                              {/* Quantity Dropdown */}
                               <div className="relative">
                                 <select
                                   value={item.quantity}
+                                  disabled={isOutOfStock}
                                   onChange={(e) => handleUpdateQuantity(idx, Number(e.target.value))}
-                                  className="appearance-none bg-[#F3F0E6] border border-[#E5E0D8] rounded-md px-3 py-1.5 pr-8 font-medium text-xs tabular-nums cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#021438]"
+                                  className="appearance-none bg-walters-offwhite border border-walters-border rounded-md px-3 py-1.5 pr-8 font-medium text-xs tabular-nums cursor-pointer focus:outline-none focus:ring-1 focus:ring-walters-navy disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
-                                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                                    <option key={num} value={num}>
-                                      {num}
-                                    </option>
-                                  ))}
+                                  {isOutOfStock ? (
+                                    <option value={item.quantity}>0</option>
+                                  ) : (
+                                    optionsList.map((num) => (
+                                      <option key={num} value={num}>
+                                        {num}
+                                      </option>
+                                    ))
+                                  )}
                                 </select>
-                                <ChevronDown className="w-3.5 h-3.5 text-[#021438] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <ChevronDown className="w-3.5 h-3.5 text-walters-navy absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                               </div>
 
                               {/* Edit Option */}
-                              {item.purchaseType === 'prescription' && (
+                              {!isOutOfStock && item.purchaseType === 'prescription' && (
                                 <button
                                   type="button"
                                   onClick={() => handleSelectPrescription(item.product, idx)}
-                                  className="hover:underline flex items-center space-x-1 text-[#021438]"
+                                  className="hover:underline flex items-center space-x-1 text-walters-navy cursor-pointer"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                   <span>Edit</span>
@@ -198,7 +220,7 @@ export const Cart: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleSaveForLater(idx)}
-                                className="hover:underline text-[#5E6470] hover:text-[#021438]"
+                                className="hover:underline text-walters-slate hover:text-walters-navy cursor-pointer"
                               >
                                 Save for later
                               </button>
@@ -207,7 +229,7 @@ export const Cart: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(idx)}
-                                className="hover:underline text-[#5E6470] hover:text-red-600"
+                                className="hover:underline text-walters-slate hover:text-red-600 cursor-pointer"
                               >
                                 Remove
                               </button>
@@ -220,13 +242,14 @@ export const Cart: React.FC = () => {
                   </div>
 
                   {/* Delivery Info */}
-                  <div className="p-4 bg-[#FBFAF5] border-t border-[#E5E0D8] flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs text-[#5E6470] gap-2">
+                  <div className="p-4 bg-walters-offwhite border-t border-walters-border flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs text-walters-slate gap-2">
                     <span>
-                      Delivery: <strong className="text-[#021438] font-semibold">FREE</strong> (Estimated 2-3 working days)
+                      Delivery: <strong className="text-walters-navy font-semibold">FREE</strong> (Estimated 2-3 working days)
                     </span>
                     <button 
                       onClick={() => navigate('/checkout')}
-                      className="font-semibold text-[#021438] hover:underline flex items-center space-x-1"
+                      disabled={hasUnavailableItems}
+                      className="font-semibold text-walters-navy hover:underline flex items-center space-x-1 disabled:opacity-40 disabled:no-underline cursor-pointer"
                     >
                       <span>Check out from this store</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -238,43 +261,43 @@ export const Cart: React.FC = () => {
 
               {/* SAVE FOR LATER */}
               {savedItems.length > 0 && (
-                <div className="bg-white border border-[#E5E0D8] rounded-xl p-6 shadow-xs space-y-4">
-                  <div className="flex items-center space-x-2 border-b border-[#E5E0D8] pb-3">
-                    <Bookmark className="w-4 h-4 text-[#021438]" />
-                    <h2 className="text-base font-semibold text-[#021438]">
-                      Saved for Later <span className="text-xs font-normal text-[#5E6470] tabular-nums">({savedItems.length})</span>
+                <div className="bg-white border border-walters-border rounded-xl p-6 shadow-xs space-y-4">
+                  <div className="flex items-center space-x-2 border-b border-walters-border pb-3">
+                    <Bookmark className="w-4 h-4 text-walters-navy" />
+                    <h2 className="text-base font-semibold text-walters-navy">
+                      Saved for Later <span className="text-xs font-normal text-walters-slate tabular-nums">({savedItems.length})</span>
                     </h2>
                   </div>
 
-                  <div className="divide-y divide-[#E5E0D8]">
+                  <div className="divide-y divide-walters-border">
                     {savedItems.map((sItem, sIdx) => (
                       <div key={sIdx} className="py-4 flex items-center justify-between gap-4">
                         <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 bg-[#F8F6F0] rounded-lg p-1 shrink-0 flex items-center justify-center border border-[#E5E0D8]">
+                          <div className="w-16 h-16 bg-walters-cream rounded-lg p-1 shrink-0 flex items-center justify-center border border-walters-border">
                             {sItem.product.image_url ? (
                               <img src={sItem.product.image_url} alt={sItem.product.name} className="object-contain max-h-full" />
                             ) : (
-                              <span className="text-lg font-bold text-[#021438]/30">
+                              <span className="text-lg font-bold text-walters-navy/30">
                                 {sItem.product.name[0]}
                               </span>
                             )}
                           </div>
                           <div>
-                            <h4 className="font-semibold text-sm text-[#021438]">{sItem.product.name}</h4>
-                            <p className="text-xs text-[#5E6470] tabular-nums">{formatPrice(getItemPrice(sItem))}</p>
+                            <h4 className="font-semibold text-sm text-walters-navy">{sItem.product.name}</h4>
+                            <p className="text-xs text-walters-slate tabular-nums">{formatPrice(getItemPrice(sItem))}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-3 text-xs font-medium">
                           <button
                             onClick={() => handleMoveToCart(sIdx)}
-                            className="px-3 py-1.5 bg-[#021438] text-white rounded-md hover:bg-[#E6AA38] hover:text-[#021438] transition-all"
+                            className="px-3 py-1.5 bg-walters-navy text-white rounded-md hover:bg-walters-gold hover:text-walters-navy transition-all cursor-pointer"
                           >
                             Move to Basket
                           </button>
                           <button
                             onClick={() => handleRemoveSavedItem(sIdx)}
-                            className="p-1.5 text-[#5E6470] hover:text-red-600"
+                            className="p-1.5 text-walters-slate hover:text-red-600 cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -289,16 +312,16 @@ export const Cart: React.FC = () => {
 
             {/* RIGHT COLUMN: Order Summary */}
             <div className="lg:col-span-4 sticky top-24 space-y-4">
-              <div className="bg-white border border-[#E5E0D8] rounded-xl p-6 shadow-xs space-y-5">
+              <div className="bg-white border border-walters-border rounded-xl p-6 shadow-xs space-y-5">
                 
-                <h2 className="text-base font-semibold text-[#021438] border-b border-[#E5E0D8] pb-3">
+                <h2 className="text-base font-semibold text-walters-navy border-b border-walters-border pb-3">
                   Order Summary
                 </h2>
 
-                <div className="space-y-3 text-xs text-[#5E6470]">
+                <div className="space-y-3 text-xs text-walters-slate">
                   <div className="flex justify-between">
                     <span>Item(s) total</span>
-                    <span className="font-semibold text-[#021438] tabular-nums">{formatPrice(rawSubtotal)}</span>
+                    <span className="font-semibold text-walters-navy tabular-nums">{formatPrice(rawSubtotal)}</span>
                   </div>
 
                   {discountAmount > 0 && (
@@ -310,7 +333,7 @@ export const Cart: React.FC = () => {
 
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-[#021438] tabular-nums">{formatPrice(finalSubtotal)}</span>
+                    <span className="font-semibold text-walters-navy tabular-nums">{formatPrice(finalSubtotal)}</span>
                   </div>
 
                   <div className="flex justify-between">
@@ -318,22 +341,22 @@ export const Cart: React.FC = () => {
                     <span className="font-semibold text-emerald-700">FREE</span>
                   </div>
 
-                  <div className="border-t border-[#E5E0D8] pt-3 flex justify-between items-baseline text-base font-semibold text-[#021438]">
+                  <div className="border-t border-walters-border pt-3 flex justify-between items-baseline text-base font-semibold text-walters-navy">
                     <span>Total ({cartItems.length} items)</span>
                     <span className="text-xl font-bold tabular-nums">{formatPrice(finalSubtotal)}</span>
                   </div>
                 </div>
 
                 {/* Gift Option */}
-                <div className="pt-2 border-t border-[#E5E0D8]">
-                  <label className="flex items-center space-x-2 text-xs text-[#021438] font-medium cursor-pointer">
+                <div className="pt-2 border-t border-walters-border">
+                  <label className="flex items-center space-x-2 text-xs text-walters-navy font-medium cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isGift}
                       onChange={(e) => setIsGift(e.target.checked)}
-                      className="rounded border-[#E5E0D8] text-[#021438] focus:ring-[#021438] cursor-pointer"
+                      className="rounded border-walters-border text-walters-navy focus:ring-walters-navy cursor-pointer"
                     />
-                    <Gift className="w-4 h-4 text-[#021438]" />
+                    <Gift className="w-4 h-4 text-walters-navy" />
                     <span>Mark order as a gift</span>
                   </label>
                 </div>
@@ -342,41 +365,30 @@ export const Cart: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/checkout')}
-                  disabled={cartItems.length === 0}
-                  className="w-full py-3.5 bg-[#021438] text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-[#E6AA38] hover:text-[#021438] transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                  disabled={cartItems.length === 0 || hasUnavailableItems}
+                  className="w-full py-3.5 bg-walters-navy text-white text-xs font-semibold uppercase tracking-wider rounded-full hover:bg-walters-gold hover:text-walters-navy transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  <span>Proceed to checkout</span>
+                  <span>{hasUnavailableItems ? 'Remove Unavailable Items' : 'Proceed to Checkout'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
-                {/* PayPal Express Button */}
-                <button
-                  type="button"
-                  onClick={() => navigate('/checkout')}
-                  disabled={cartItems.length === 0}
-                  className="w-full py-2.5 bg-[#FFC439] hover:bg-[#F2BA31] text-[#003087] text-xs font-bold rounded-full transition-all flex items-center justify-center space-x-1 disabled:opacity-50 cursor-pointer"
-                >
-                  <span className="italic font-extrabold text-sm">Pay</span>
-                  <span className="italic font-extrabold text-sm text-[#0079C1]">Pal</span>
-                </button>
-
                 {/* Security Guarantee */}
-                <div className="pt-3 border-t border-[#E5E0D8] text-center space-y-1">
-                  <div className="flex items-center justify-center space-x-1.5 text-[11px] font-medium text-[#5E6470]">
+                <div className="pt-3 border-t border-walters-border text-center space-y-1">
+                  <div className="flex items-center justify-center space-x-1.5 text-[11px] font-medium text-walters-slate">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
                     <span>Encrypted & Secure Checkout</span>
                   </div>
                 </div>
 
                 {/* Coupon Code Accordion */}
-                <div className="border-t border-[#E5E0D8] pt-3">
+                <div className="border-t border-walters-border pt-3">
                   <button
                     type="button"
                     onClick={() => setShowCouponInput(!showCouponInput)}
-                    className="w-full flex items-center justify-between text-xs font-semibold text-[#021438] hover:underline"
+                    className="w-full flex items-center justify-between text-xs font-semibold text-walters-navy hover:underline cursor-pointer"
                   >
                     <div className="flex items-center space-x-1.5">
-                      <Tag className="w-3.5 h-3.5 text-[#E6AA38]" />
+                      <Tag className="w-3.5 h-3.5 text-walters-gold" />
                       <span>Apply coupon code</span>
                     </div>
                     {showCouponInput ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -389,11 +401,11 @@ export const Cart: React.FC = () => {
                         placeholder="e.g. WALTERS10"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value)}
-                        className="flex-1 bg-[#F8F6F0] border border-[#E5E0D8] rounded-md px-3 py-1.5 text-xs text-[#021438] uppercase focus:outline-none focus:ring-1 focus:ring-[#021438]"
+                        className="flex-1 bg-walters-cream border border-walters-border rounded-md px-3 py-1.5 text-xs text-walters-navy uppercase focus:outline-none focus:ring-1 focus:ring-walters-navy"
                       />
                       <button
                         type="submit"
-                        className="px-4 py-1.5 bg-[#021438] text-white text-xs font-semibold rounded-md hover:bg-[#E6AA38] hover:text-[#021438] transition-all"
+                        className="px-4 py-1.5 bg-walters-navy text-white text-xs font-semibold rounded-md hover:bg-walters-gold hover:text-walters-navy transition-all cursor-pointer"
                       >
                         Apply
                       </button>

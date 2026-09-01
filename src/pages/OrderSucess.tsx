@@ -1,3 +1,4 @@
+//src/pages/OrderSucess.tsx
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle, Package, Truck, Calendar, ArrowRight, FileText } from 'lucide-react';

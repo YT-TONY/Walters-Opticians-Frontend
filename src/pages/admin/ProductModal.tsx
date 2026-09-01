@@ -11,6 +11,7 @@ interface ProductModalProps {
 }
 
 const getDefaultFormData = (product: AdminProduct | null) => ({
+  model_code: product?.model_code ?? '',
   name: product?.name ?? '',
   brand: product?.brand ?? 'Walters Opticians',
   color: product?.color ?? '',
@@ -102,7 +103,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-navy font-semibold mb-1">Model Code (Group Key)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. MARLOWE-01"
+                  value={formData.model_code}
+                  onChange={(e) => setFormData({ ...formData, model_code: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
+                />
+              </div>
               <div>
                 <label className="block text-navy font-semibold mb-1">Frame Name *</label>
                 <input
@@ -110,7 +121,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
@@ -120,20 +131,21 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   required
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-navy font-semibold mb-1">Color</label>
+                <label className="block text-navy font-semibold mb-1">Color Description *</label>
                 <input
                   type="text"
                   required
+                  placeholder="e.g. Tortoise Shell"
                   value={formData.color}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
@@ -141,7 +153,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value as Gender })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize text-charcoal focus:outline-none focus:border-navy"
                 >
                   <option value="unisex">Unisex</option>
                   <option value="male">Male</option>
@@ -153,7 +165,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <select
                   value={formData.shape}
                   onChange={(e) => setFormData({ ...formData, shape: e.target.value as FrameShape })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize text-charcoal focus:outline-none focus:border-navy"
                 >
                   <option value="round">Round</option>
                   <option value="square">Square</option>
@@ -168,7 +180,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <select
                   value={formData.frameType}
                   onChange={(e) => setFormData({ ...formData, frameType: e.target.value as FrameType })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 >
                   <option value="full-rim">Full Rim</option>
                   <option value="half-rim">Half Rim</option>
@@ -186,7 +198,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   required
                   value={formData.price_full_gbp}
                   onChange={(e) => setFormData({ ...formData, price_full_gbp: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
@@ -196,7 +208,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   required
                   value={formData.price_frame_only_gbp}
                   onChange={(e) => setFormData({ ...formData, price_frame_only_gbp: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
@@ -206,7 +218,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   required
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
                 />
               </div>
             </div>
@@ -218,7 +230,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   {formData.image_url && (
                     <img src={formData.image_url} alt="Preview" className="w-12 h-12 rounded object-contain bg-offwhite border border-border" />
                   )}
-                  <label className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-border rounded-lg cursor-pointer">
+                  <label className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-border rounded-lg cursor-pointer hover:bg-offwhite">
                     <Upload className="w-4 h-4 text-navy" />
                     <span>Upload Image</span>
                     <input type="file" accept="image/*" onChange={handleMainImageChange} className="hidden" />

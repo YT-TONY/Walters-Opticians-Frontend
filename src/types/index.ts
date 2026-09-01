@@ -11,8 +11,8 @@ export interface AuthResponse {
 }
 
 export interface Product {
-  images?: string[];
   id: number;
+  model_code?: string;
   name: string;
   brand: string;
   shape: string;
@@ -24,6 +24,8 @@ export interface Product {
   stock_quantity: number;
   is_active: boolean;
   image_url?: string;
+  gallery?: string[];
+  images?: string[];
 }
 
 export interface PrescriptionData {

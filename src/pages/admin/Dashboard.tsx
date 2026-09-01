@@ -12,6 +12,7 @@ import { productsApi, type BackendProduct } from '../../api/products';
 
 const mapBackendToAdminProduct = (p: BackendProduct): AdminProduct => ({
   id: String(p.id),
+  model_code: p.model_code || '',
   name: p.name,
   brand: p.brand,
   color: p.color_description,
@@ -26,6 +27,7 @@ const mapBackendToAdminProduct = (p: BackendProduct): AdminProduct => ({
 });
 
 const mapAdminToBackendCreate = (formData: Omit<AdminProduct, 'id'>) => ({
+  model_code: formData.model_code || undefined,
   name: formData.name,
   brand: formData.brand,
   shape: formData.shape,
@@ -157,7 +159,8 @@ export const AdminDashboard: React.FC = () => {
         !searchQuery ||
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.color.toLowerCase().includes(searchQuery.toLowerCase());
+        p.color.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.model_code && p.model_code.toLowerCase().includes(searchQuery.toLowerCase()));
 
       return matchesBrand && matchesSearch;
     });

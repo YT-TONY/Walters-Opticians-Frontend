@@ -1,3 +1,4 @@
+//src/hooks/useCategories.ts
 import { useContext } from 'react';
 import { CategoryContext, type CategoryContextType } from '../context/CategoryContext';
 

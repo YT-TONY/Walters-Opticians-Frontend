@@ -1,3 +1,4 @@
+//src/pages/Products.tsx
 import React, { useEffect, useState } from 'react';
 import type { Product, PrescriptionData } from '../types';
 import { apiClient } from '../api/client';
@@ -51,13 +52,13 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
   });
 
   return (
-    <div className="min-h-screen bg-[#FBFAF5] py-10 px-6">
+    <div className="min-h-screen bg-cream10 px-6">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#E5E0D8] pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#021438]">Optical Frames</h1>
-            <p className="text-xs text-[#5E6470] mt-1">Handcrafted frame collections tailored with prescription precision.</p>
+            <h1 className="font-serif text-3xl md:text-4xl font-bold text-navy">Optical Frames</h1>
+            <p className="text-xs text-slate mt-1">Handcrafted frame collections tailored with prescription precision.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -66,12 +67,12 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
               placeholder="Search frames..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="px-4 py-2 border border-[#E5E0D8] rounded-xl text-xs bg-white text-[#1A1A1A] focus:outline-none focus:border-[#021438]"
+              className="px-4 py-2 border border-border rounded-xl text-xs bg-white text-charcoal focus:outline-none focus:border-navy"
             />
             <select
               value={shapeFilter}
               onChange={(e) => setShapeFilter(e.target.value)}
-              className="px-4 py-2 border border-[#E5E0D8] rounded-xl text-xs bg-white text-[#1A1A1A] focus:outline-none"
+              className="px-4 py-2 border border-border rounded-xl text-xs bg-white text-charcoal focus:outline-none"
             >
               <option value="ALL">All Shapes</option>
               <option value="Round">Round</option>
@@ -85,7 +86,16 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              formatPrice={(price) => `£${price.toFixed(2)}`}
+              onAddToCart={(product, option) => {
+                if (option === 'frames_only' || option === 'prescription') {
+                  onAddToCart(product, option);
+                }
+              }}
+            />
           ))}
         </div>
 

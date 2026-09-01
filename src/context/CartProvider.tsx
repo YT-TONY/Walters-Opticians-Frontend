@@ -3,6 +3,7 @@ import type { Product, CartItem, PrescriptionData } from '../types/index';
 import { CartContext } from './CartContext';
 import { CartDrawer } from '../components/CartDrawer';
 import { useAuth } from '../hooks/useAuth';
+import { productsApi } from '../api/products';
 import { toast } from 'sonner';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -35,6 +36,44 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
+  // Revalidate cart items against live database stock levels
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncLiveStock = async () => {
+      try {
+        const liveProducts = await productsApi.getAll();
+        if (!isMounted) return;
+
+        setCartItems((prev) =>
+          prev.map((item) => {
+            const match = liveProducts.find((p) => String(p.id) === String(item.product.id));
+            if (match) {
+              return {
+                ...item,
+                product: {
+                  ...item.product,
+                  stock_quantity: match.stock_quantity,
+                  price_full_gbp: match.price_full_gbp,
+                  price_frame_only_gbp: match.price_frame_only_gbp,
+                },
+              };
+            }
+            return item;
+          })
+        );
+      } catch (error: unknown) {
+        console.error('Failed to sync live cart stock:', error);
+      }
+    };
+
+    syncLiveStock();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isDrawerOpen]);
+
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cartItems));
   }, [cartItems, storageKey]);
@@ -44,35 +83,57 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [savedItems, savedStorageKey]);
 
   const handleAddStandard = (product: Product) => {
+    let exceedsStock = false;
+
     setCartItems((prev) => {
       const existing = prev.find(
         (item) => item.product.id === product.id && item.purchaseType === 'standard'
       );
       if (existing) {
+        if (existing.quantity >= product.stock_quantity) {
+          exceedsStock = true;
+          return prev;
+        }
         return prev.map((item) =>
           item === existing ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prev, { product, quantity: 1, purchaseType: 'standard' }];
     });
-    toast.success(`${product.name} added to bag!`);
-    setIsDrawerOpen(true);
+
+    if (exceedsStock) {
+      toast.warning(`Cannot add more. Maximum available stock (${product.stock_quantity}) reached.`);
+    } else {
+      toast.success(`${product.name} added to bag!`);
+      setIsDrawerOpen(true);
+    }
   };
 
   const handleAddFrameOnly = (product: Product) => {
+    let exceedsStock = false;
+
     setCartItems((prev) => {
       const existing = prev.find(
         (item) => item.product.id === product.id && item.purchaseType === 'frames_only'
       );
       if (existing) {
+        if (existing.quantity >= product.stock_quantity) {
+          exceedsStock = true;
+          return prev;
+        }
         return prev.map((item) =>
           item === existing ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prev, { product, quantity: 1, purchaseType: 'frames_only' }];
     });
-    toast.success(`${product.name} (Frame Only) added to bag!`);
-    setIsDrawerOpen(true);
+
+    if (exceedsStock) {
+      toast.warning(`Cannot add more. Maximum available stock (${product.stock_quantity}) reached.`);
+    } else {
+      toast.success(`${product.name} (Frame Only) added to bag!`);
+      setIsDrawerOpen(true);
+    }
   };
 
   const handleSelectPrescription = (product: Product, editIndex?: number) => {
@@ -128,6 +189,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (quantity <= 0) {
       handleRemoveItem(index);
       return;
+    }
+    const target = cartItems[index];
+    if (target && quantity > target.product.stock_quantity) {
+      toast.warning(`Maximum available stock for ${target.product.name} is ${target.product.stock_quantity}.`);
+      quantity = target.product.stock_quantity;
     }
     setCartItems((prev) =>
       prev.map((item, i) => (i === index ? { ...item, quantity } : item))

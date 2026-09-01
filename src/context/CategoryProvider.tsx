@@ -1,3 +1,4 @@
+//src/context/CategoryProvider.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { CategoryContext } from './CategoryContext';
 import type { Category } from '../context/Category';

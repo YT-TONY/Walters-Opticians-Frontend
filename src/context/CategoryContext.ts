@@ -1,3 +1,4 @@
+//src/context/CategoryContext.ts
 import { createContext } from 'react';
 import type { Category } from './Category';
 

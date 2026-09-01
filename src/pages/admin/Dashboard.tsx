@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Package, ShoppingBag, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { type AdminProduct, type UKBookingRequest, type FrameShape, type FrameType } from '../../types/admin';
+import { type AdminProduct, type UKBookingRequest, type FrameShape, type FrameType, type Gender } from '../../types/admin';
 import { useOrders } from '../../hooks/useOrder';
 import { StockInventoryTab } from './StockInventoryTab';
 import { OrdersTab } from './OrdersTab';
@@ -10,13 +10,13 @@ import { BookingsTab } from './BookingsTab';
 import { ProductModal } from './ProductModal';
 import { productsApi, type BackendProduct } from '../../api/products';
 
-const mapBackendToAdminProduct = (p: BackendProduct): AdminProduct => ({
+const mapBackendToAdminProduct = (p: BackendProduct & { gender?: string }): AdminProduct => ({
   id: String(p.id),
   model_code: p.model_code || '',
   name: p.name,
   brand: p.brand,
   color: p.color_description,
-  gender: 'unisex',
+  gender: (p.gender?.toLowerCase() as Gender) || 'unisex',
   shape: (p.shape?.toLowerCase() as FrameShape) || 'round',
   frameType: ((p as { frame_type?: string }).frame_type as FrameType) || 'full-rim',
   price_full_gbp: p.price_full_gbp,
@@ -30,6 +30,7 @@ const mapAdminToBackendCreate = (formData: Omit<AdminProduct, 'id'>) => ({
   model_code: formData.model_code || undefined,
   name: formData.name,
   brand: formData.brand,
+  gender: formData.gender,
   shape: formData.shape,
   color_description: formData.color,
   frame_type: formData.frameType || 'full-rim',

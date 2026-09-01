@@ -31,10 +31,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [prevEditingProduct, setPrevEditingProduct] = useState(editingProduct);
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevEditingProduct, setPrevEditingProduct] = useState<AdminProduct | null>(editingProduct);
+  const [prevIsOpen, setPrevIsOpen] = useState<boolean>(isOpen);
   const [formData, setFormData] = useState(() => getDefaultFormData(editingProduct));
 
+  // Render-phase state adjustment prevents ESLint set-state-in-effect warning
   if (isOpen !== prevIsOpen || editingProduct !== prevEditingProduct) {
     setPrevIsOpen(isOpen);
     setPrevEditingProduct(editingProduct);
@@ -97,7 +98,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             <h3 className="text-lg font-bold text-navy">
               {editingProduct ? 'Edit Frame Details' : 'Add New Optical Frame'}
             </h3>
-            <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-offwhite">
+            <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-offwhite cursor-pointer">
               <X className="w-5 h-5 text-slate" />
             </button>
           </div>
@@ -153,7 +154,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value as Gender })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize text-charcoal focus:outline-none focus:border-navy"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize text-charcoal focus:outline-none focus:border-navy cursor-pointer"
                 >
                   <option value="unisex">Unisex</option>
                   <option value="male">Male</option>
@@ -165,7 +166,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <select
                   value={formData.shape}
                   onChange={(e) => setFormData({ ...formData, shape: e.target.value as FrameShape })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize text-charcoal focus:outline-none focus:border-navy"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg capitalize text-charcoal focus:outline-none focus:border-navy cursor-pointer"
                 >
                   <option value="round">Round</option>
                   <option value="square">Square</option>
@@ -180,7 +181,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <select
                   value={formData.frameType}
                   onChange={(e) => setFormData({ ...formData, frameType: e.target.value as FrameType })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy cursor-pointer"
                 >
                   <option value="full-rim">Full Rim</option>
                   <option value="half-rim">Half Rim</option>

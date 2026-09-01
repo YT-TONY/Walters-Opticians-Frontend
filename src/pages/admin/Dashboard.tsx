@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Calendar, Loader2 } from 'lucide-react';
+// src/pages/admin/Dashboard.tsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { Package, ShoppingBag, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { type AdminProduct, type UKBookingRequest, type FrameShape, type FrameType } from '../../types/admin';
 import { useOrders } from '../../hooks/useOrder';
@@ -9,7 +10,6 @@ import { BookingsTab } from './BookingsTab';
 import { ProductModal } from './ProductModal';
 import { productsApi, type BackendProduct } from '../../api/products';
 
-// Helper transformers between Backend DB Models and Admin UI Models
 const mapBackendToAdminProduct = (p: BackendProduct): AdminProduct => ({
   id: String(p.id),
   name: p.name,
@@ -22,7 +22,7 @@ const mapBackendToAdminProduct = (p: BackendProduct): AdminProduct => ({
   price_frame_only_gbp: p.price_frame_only_gbp,
   stock: p.stock_quantity,
   image_url: p.image_url,
-  gallery: p.image_url ? [p.image_url] : [],
+  gallery: p.gallery && p.gallery.length > 0 ? p.gallery : (p.image_url ? [p.image_url] : []),
 });
 
 const mapAdminToBackendCreate = (formData: Omit<AdminProduct, 'id'>) => ({
@@ -35,6 +35,7 @@ const mapAdminToBackendCreate = (formData: Omit<AdminProduct, 'id'>) => ({
   allow_frame_only: true,
   price_frame_only_gbp: formData.price_frame_only_gbp,
   image_url: formData.image_url || 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80',
+  gallery: formData.gallery,
   stock_quantity: formData.stock,
   is_active: true,
   is_featured: false,
@@ -45,8 +46,13 @@ export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'bookings'>('products');
 
   const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
   const [bookings, setBookings] = useState<UKBookingRequest[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
+  // Search & Brand Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
@@ -54,15 +60,20 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const loadProducts = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const dbProducts = await productsApi.getAll();
+        const [dbProducts, brands] = await Promise.all([
+          productsApi.getAll(),
+          productsApi.getBrands(),
+        ]);
+
         if (isMounted) {
           setProducts(dbProducts.map(mapBackendToAdminProduct));
+          setAvailableBrands(brands);
         }
       } catch (error) {
         if (isMounted) {
-          toast.error('Failed to fetch product inventory from database.');
+          toast.error('Failed to fetch inventory & brands from database.');
           console.error(error);
         }
       } finally {
@@ -72,7 +83,7 @@ export const AdminDashboard: React.FC = () => {
       }
     };
 
-    loadProducts();
+    fetchDashboardData();
 
     return () => {
       isMounted = false;
@@ -115,11 +126,15 @@ export const AdminDashboard: React.FC = () => {
         const created = await productsApi.create(payload);
         const adminProduct = mapBackendToAdminProduct(created);
         setProducts((prev) => [adminProduct, ...prev]);
-        toast.success('New frame added to inventory and active store catalog.');
+        toast.success('New frame and brand added to inventory.');
       }
+      
+      // Refresh dynamic brand list
+      const updatedBrands = await productsApi.getBrands();
+      setAvailableBrands(updatedBrands);
       setIsModalOpen(false);
     } catch (error) {
-      toast.error('Failed to save frame to database. Please check image format or backend connection.');
+      toast.error('Failed to save frame to database.');
       console.error(error);
     }
   };
@@ -134,15 +149,30 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
+  // Filter products by Brand and Search Query
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesBrand = selectedBrand === 'all' || p.brand.toLowerCase() === selectedBrand.toLowerCase();
+      const matchesSearch =
+        !searchQuery ||
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.color.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesBrand && matchesSearch;
+    });
+  }, [products, selectedBrand, searchQuery]);
+
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-charcoal font-sans antialiased pb-20">
+    <div className="min-h-screen bg-cream text-charcoal font-sans antialiased pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
           <div>
             <h1 className="text-2xl font-bold text-navy tracking-tight">Admin Portal</h1>
             <p className="text-xs text-slate mt-1">
-              Manage optical frame inventory, customer order fulfillment, and UK consultation bookings.
+              Manage optical frame inventory ({products.length.toLocaleString()} items), customer orders, and UK consultation bookings.
             </p>
           </div>
 
@@ -185,19 +215,20 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Tab Views */}
         {activeTab === 'products' && (
-          isLoadingProducts ? (
-            <div className="flex items-center justify-center py-24 text-slate">
-              <Loader2 className="w-6 h-6 animate-spin mr-2 text-navy" />
-              <span className="text-xs font-semibold">Loading Database Inventory...</span>
-            </div>
-          ) : (
+          <div className="pt-6">
             <StockInventoryTab
-              products={products}
+              products={filteredProducts}
+              availableBrands={availableBrands}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              selectedBrand={selectedBrand}
+              onBrandChange={setSelectedBrand}
+              isLoading={isLoadingProducts}
               onAddClick={handleOpenAddModal}
               onEditClick={handleOpenEditModal}
               onDeleteClick={handleDeleteProduct}
             />
-          )
+          </div>
         )}
 
         {activeTab === 'orders' && <OrdersTab orders={orders} />}

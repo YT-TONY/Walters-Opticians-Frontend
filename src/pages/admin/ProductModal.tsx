@@ -1,4 +1,3 @@
-// src/pages/admin/ProductModal.tsx
 import React, { useState } from 'react';
 import { X, Upload, Trash2, Plus } from 'lucide-react';
 import { type AdminProduct, type Gender, type FrameShape, type FrameType } from '../../types/admin';
@@ -27,6 +26,7 @@ const getDefaultFormData = (product: AdminProduct | null) => ({
   polarized: product?.polarized ?? false,
   photochromic: product?.photochromic ?? false,
   gradables: product?.gradables ?? false,
+  is_bestseller: (product as { is_bestseller?: boolean })?.is_bestseller ?? false,
   lens_width: product?.lens_width ?? 54.0,
   bridge_width: product?.bridge_width ?? 17.0,
   temple_length: product?.temple_length ?? 140.0,
@@ -59,7 +59,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Universal Brand Template Generator
   const handleApplyBrandTemplate = () => {
     const template = `Buy Now ${formData.gender === 'female' ? "Women's" : formData.gender === 'male' ? "Men's" : "Unisex"} Glasses Online ${formData.brand} ${formData.name} - ${formData.color_code || '8228'} ${formData.color} ${formData.shape}, at a reduced price at the best price Made in Italy New ${formData.brand} Collection. Visit our store.`;
     setFormData((p) => ({ ...p, description: template }));
@@ -247,7 +246,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
             </div>
 
-            {/* Product Description with Brand Template Button */}
+            {/* Description */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-navy font-semibold">Product Description</label>
@@ -317,48 +316,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
             </div>
 
-            {/* Material & Lens Specs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-navy font-semibold mb-1">Frame Material</label>
-                <input
-                  type="text"
-                  value={formData.frame_material}
-                  onChange={(e) => setFormData({ ...formData, frame_material: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-navy font-semibold mb-1">Glass Material</label>
-                <input
-                  type="text"
-                  value={formData.lens_material}
-                  onChange={(e) => setFormData({ ...formData, lens_material: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-navy font-semibold mb-1">Lens Color</label>
-                <input
-                  type="text"
-                  value={formData.lens_color}
-                  onChange={(e) => setFormData({ ...formData, lens_color: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-navy font-semibold mb-1">Glass Base</label>
-                <input
-                  type="text"
-                  value={formData.glass_base}
-                  onChange={(e) => setFormData({ ...formData, glass_base: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Toggles (Polarized, Photochromic, Gradables) */}
-            <div className="flex items-center space-x-6 py-2 bg-offwhite px-3 rounded-lg border border-border">
+            {/* Feature Flags & Bestseller Toggle */}
+            <div className="flex flex-wrap items-center gap-6 py-2 bg-offwhite px-3 rounded-lg border border-border">
               <label className="flex items-center space-x-2 cursor-pointer text-navy font-medium">
                 <input
                   type="checkbox"
@@ -388,9 +347,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 />
                 <span>Gradables</span>
               </label>
+
+              <label className="flex items-center space-x-2 cursor-pointer text-blue-900 font-semibold border-l border-border pl-4">
+                <input
+                  type="checkbox"
+                  checked={formData.is_bestseller}
+                  onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
+                  className="rounded text-[#1B75BC] focus:ring-[#1B75BC] cursor-pointer"
+                />
+                <span>Mark Bestseller Badge</span>
+              </label>
             </div>
 
-            {/* Available Sizes Manager */}
+            {/* Sizes Manager */}
             <div className="bg-white p-3 rounded-xl border border-border space-y-2">
               <label className="block text-navy font-semibold">Available Sizes</label>
               <div className="flex flex-wrap gap-2 mb-2">
@@ -456,7 +425,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
             </div>
 
-            {/* Images & Size Chart Upload */}
+            {/* Image Uploads */}
             <div className="space-y-3 pt-2 border-t border-border">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

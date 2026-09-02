@@ -1,6 +1,6 @@
-//src/context/CartContext.ts
+// src/context/CartContext.ts
 import { createContext } from 'react';
-import type { Product, CartItem, PrescriptionData } from '../types/index';
+import type { Product, CartItem, PrescriptionData, PurchaseType } from '../types/index';
 
 export interface CartContextType {
   cartItems: CartItem[];
@@ -10,8 +10,16 @@ export interface CartContextType {
   isModalOpen: boolean;
   selectedProduct: Product | null;
   editingItemIndex: number | null;
-  handleAddStandard: (product: Product) => void;
-  handleAddFrameOnly: (product: Product) => void;
+  
+  // Slide-Over Config Drawer State
+  isConfigDrawerOpen: boolean;
+  configItemIndex: number | null;
+  handleOpenConfigDrawer: (index: number) => void;
+  handleCloseConfigDrawer: () => void;
+  handleUpdateConfiguredItem: (index: number, purchaseType: PurchaseType, quantity: number) => void;
+
+  handleAddStandard: (product: Product, isFromCard?: boolean, targetIndex?: number) => void;
+  handleAddFrameOnly: (product: Product, isFromCard?: boolean, targetIndex?: number) => void;
   handleSelectPrescription: (product: Product, editIndex?: number) => void;
   handleConfirmPrescription: (prescription: PrescriptionData) => void;
   handleCloseModal: () => void;

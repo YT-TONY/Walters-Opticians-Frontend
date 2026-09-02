@@ -1,4 +1,3 @@
-//src/api/products.ts
 import { apiClient } from './client';
 
 export interface ProductFilterParams {
@@ -6,6 +5,8 @@ export interface ProductFilterParams {
   brand?: string;
   shape?: string;
   color?: string;
+  tier?: 'luxury' | 'bridge' | 'budget';
+  is_bestseller?: boolean;
   min_price?: number;
   max_price?: number;
   in_stock_only?: boolean;
@@ -46,6 +47,7 @@ export interface BackendProduct {
   stock_quantity: number;
   is_active: boolean;
   is_featured: boolean;
+  is_bestseller?: boolean;
 }
 
 export type BackendProductCreate = Omit<BackendProduct, 'id'>;
@@ -61,19 +63,16 @@ export interface PaginatedCatalogResponse {
 }
 
 export const productsApi = {
-  // GET /api/v1/products/
   getAll: async (params?: ProductFilterParams): Promise<BackendProduct[]> => {
     const response = await apiClient.get<BackendProduct[]>('/products/', { params });
     return response.data;
   },
 
-  // GET /api/v1/products/brands (Dynamic brand category list from DB)
   getBrands: async (): Promise<string[]> => {
     const response = await apiClient.get<string[]>('/products/brands');
     return response.data;
   },
 
-  // GET /api/v1/products/admin/catalog (Optimized high-scale admin catalog pagination)
   getAdminCatalog: async (params?: {
     page?: number;
     page_size?: number;
@@ -85,25 +84,21 @@ export const productsApi = {
     return response.data;
   },
 
-  // GET /api/v1/products/{identifier}
   getByIdentifier: async (identifier: string | number): Promise<BackendProduct> => {
     const response = await apiClient.get<BackendProduct>(`/products/${identifier}`);
     return response.data;
   },
 
-  // POST /api/v1/products/ (Admin only)
   create: async (data: BackendProductCreate): Promise<BackendProduct> => {
     const response = await apiClient.post<BackendProduct>('/products/', data);
     return response.data;
   },
 
-  // PUT /api/v1/products/{identifier} (Admin only)
   update: async (identifier: string | number, data: BackendProductUpdate): Promise<BackendProduct> => {
     const response = await apiClient.put<BackendProduct>(`/products/${identifier}`, data);
     return response.data;
   },
 
-  // DELETE /api/v1/products/{identifier} (Admin only)
   delete: async (identifier: string | number): Promise<void> => {
     await apiClient.delete(`/products/${identifier}`);
   },

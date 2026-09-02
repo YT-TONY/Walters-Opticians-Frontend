@@ -1,6 +1,7 @@
+// src/components/CartDrawer.tsx
 import React from 'react';
 import type { CartItem } from '../types';
-import { X, ShoppingBag, ArrowRight, Trash2, Plus, Minus, ShieldCheck, Edit3, AlertTriangle } from 'lucide-react';
+import { X, ShoppingBag, ArrowRight, Trash2, Plus, Minus, ShieldCheck, Edit3, AlertTriangle, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCart } from '../hooks/useCart';
@@ -22,14 +23,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 }) => {
   const navigate = useNavigate();
   const { formatPrice } = useCurrency();
-  const { handleSelectPrescription } = useCart();
+  const { handleOpenConfigDrawer } = useCart();
 
   if (!isOpen) return null;
 
   const getItemPrice = (item: CartItem) =>
     item.purchaseType === 'prescription'
       ? item.product.price_full_gbp
-      : item.product.price_frame_only_gbp;
+      : (item.product.price_frame_only_gbp ?? item.product.price_full_gbp);
 
   const subtotal = cartItems.reduce(
     (acc, item) => (item.product.stock_quantity > 0 ? acc + getItemPrice(item) * item.quantity : acc),
@@ -89,113 +90,139 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-walters-border">
+              <div className="space-y-3">
                 {cartItems.map((item, idx) => {
                   const itemPrice = getItemPrice(item);
-                  const isOutOfStock = item.product.stock_quantity <= 0;
+                  const stock = item.product.stock_quantity;
+                  const isOutOfStock = stock <= 0;
+                  const isLowStock = stock > 0 && stock < 8;
+                  const isPending = item.isPendingConfig;
 
                   return (
                     <div
                       key={idx}
-                      className={`py-4 first:pt-0 last:pb-0 flex gap-4 items-center transition-all ${
-                        isOutOfStock ? 'bg-red-50/30 p-2 rounded-lg' : ''
+                      className={`p-3.5 rounded-xl transition-all border ${
+                        isOutOfStock
+                          ? 'bg-rose-50/40 border-rose-200'
+                          : isPending
+                          ? 'bg-amber-100/90 border-amber-300 shadow-2xs'
+                          : 'bg-white border-walters-border'
                       }`}
                     >
-                      {/* Image Thumbnail with Isolated Grayscale */}
-                      <div
-                        className={`w-16 h-16 bg-white rounded-lg p-1.5 shrink-0 flex items-center justify-center border border-walters-border ${
-                          isOutOfStock ? 'grayscale opacity-60' : ''
-                        }`}
-                      >
-                        {item.product.image_url ? (
-                          <img
-                            src={item.product.image_url}
-                            alt={item.product.name}
-                            className="object-contain max-h-full"
-                          />
-                        ) : (
-                          <span className="text-base font-bold text-walters-navy/30">
-                            {item.product.name[0]}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Product Details */}
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <h4 className="font-semibold text-sm text-walters-navy truncate">
-                          {item.product.name}
-                        </h4>
-                        <p className="text-[11px] text-walters-slate truncate">
-                          {item.product.brand} • {item.product.color_description}
-                        </p>
-                        
-                        {isOutOfStock ? (
-                          <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                            <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                            <span>Currently unavailable</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-walters-offwhite text-walters-navy">
-                              {item.purchaseType === 'prescription' ? 'Full Prescription' : 'Frame Only'}
+                      <div className="flex gap-4 items-center">
+                        {/* Image Thumbnail */}
+                        <div
+                          className={`w-16 h-16 bg-white rounded-lg p-1.5 shrink-0 flex items-center justify-center border border-walters-border ${
+                            isOutOfStock ? 'grayscale opacity-60' : ''
+                          }`}
+                        >
+                          {item.product.image_url ? (
+                            <img
+                              src={item.product.image_url}
+                              alt={item.product.name}
+                              className="object-contain max-h-full"
+                            />
+                          ) : (
+                            <span className="text-base font-bold text-walters-navy/30">
+                              {item.product.name[0]}
                             </span>
-                            {item.purchaseType === 'prescription' && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onClose();
-                                  handleSelectPrescription(item.product, idx);
-                                }}
-                                className="text-[10px] font-semibold text-walters-navy hover:underline flex items-center space-x-0.5 cursor-pointer"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                                <span>Edit</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Price & Quantity Controls */}
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className="font-semibold text-sm text-walters-navy tabular-nums">
-                          {formatPrice(itemPrice * item.quantity)}
-                        </span>
-                        
-                        <div className="flex items-center border border-walters-border rounded-md bg-walters-offwhite">
-                          <button
-                            type="button"
-                            onClick={() => onUpdateQty(idx, -1)}
-                            disabled={isOutOfStock}
-                            className="p-1 hover:text-walters-gold transition-colors cursor-pointer disabled:opacity-30"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="w-3 h-3 text-walters-navy" />
-                          </button>
-                          <span className="px-2 text-xs font-semibold text-walters-navy tabular-nums">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onUpdateQty(idx, 1)}
-                            disabled={isOutOfStock || item.quantity >= item.product.stock_quantity}
-                            className="p-1 hover:text-walters-gold transition-colors cursor-pointer disabled:opacity-30"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="w-3 h-3 text-walters-navy" />
-                          </button>
+                          )}
                         </div>
-                      </div>
 
-                      {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => onRemove(idx)}
-                        className="p-1 text-walters-slate hover:text-red-600 transition-colors cursor-pointer"
-                        title="Remove item"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <h4 className="font-semibold text-sm text-walters-navy truncate">
+                            {item.product.name}
+                          </h4>
+                          <p className="text-[11px] text-walters-slate truncate">
+                            {item.product.brand} • {item.product.color_description}
+                          </p>
+                          
+                          {/* Low Stock Urgency Banner */}
+                          {isLowStock && (
+                            <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300/80">
+                              <Flame className="w-3 h-3 text-amber-600 shrink-0 animate-pulse" />
+                              <span>Only {stock} left in stock — order soon!</span>
+                            </div>
+                          )}
+
+                          {isOutOfStock ? (
+                            <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                              <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                              <span>Currently unavailable</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2 pt-0.5">
+                              {isPending ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenConfigDrawer(idx)}
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded text-[11px] font-bold bg-amber-300 text-amber-950 border border-amber-400 hover:bg-amber-400 transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  <Edit3 className="w-3 h-3 text-amber-900 shrink-0" />
+                                  <span>Finish Order</span>
+                                </button>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-walters-offwhite text-walters-navy">
+                                  {item.purchaseType === 'prescription' ? 'Full Prescription' : 'Frame Only'}
+                                </span>
+                              )}
+
+                              {!isPending && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenConfigDrawer(idx)}
+                                  className="text-[10px] font-semibold text-walters-navy hover:underline flex items-center space-x-0.5 cursor-pointer"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                  <span>Edit Specs</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Price & Quantity Controls */}
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className="font-semibold text-sm text-walters-navy tabular-nums">
+                            {formatPrice(itemPrice * item.quantity)}
+                          </span>
+                          
+                          <div className="flex items-center border border-walters-border rounded-md bg-walters-offwhite">
+                            <button
+                              type="button"
+                              onClick={() => onUpdateQty(idx, -1)}
+                              disabled={isOutOfStock}
+                              className="p-1 hover:text-walters-gold transition-colors cursor-pointer disabled:opacity-30"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="w-3 h-3 text-walters-navy" />
+                            </button>
+                            <span className="px-2 text-xs font-semibold text-walters-navy tabular-nums">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateQty(idx, 1)}
+                              disabled={isOutOfStock || item.quantity >= stock}
+                              className="p-1 hover:text-walters-gold transition-colors cursor-pointer disabled:opacity-30"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3 text-walters-navy" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={() => onRemove(idx)}
+                          className="p-1 text-walters-slate hover:text-red-600 transition-colors cursor-pointer"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -213,7 +240,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </span>
               </div>
 
-              {/* View Full Cart Button */}
               <button
                 type="button"
                 onClick={() => {
@@ -225,7 +251,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 View Full Cart Page
               </button>
 
-              {/* Direct Checkout Action */}
               <button
                 type="button"
                 onClick={() => {

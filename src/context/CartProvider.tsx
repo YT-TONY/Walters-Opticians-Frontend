@@ -1,13 +1,19 @@
+// src/context/CartProvider.tsx
 import React, { useState, useEffect, type ReactNode } from 'react';
-import type { Product, CartItem, PrescriptionData } from '../types/index';
+import type { Product, CartItem, PrescriptionData, PurchaseType } from '../types/index';
 import { CartContext } from './CartContext';
 import { CartDrawer } from '../components/CartDrawer';
+import { CartItemConfigDrawer } from '../components/EditStateDrawer';
+import { PrescriptionModal } from '../components/PrescriptionModal';
 import { useAuth } from '../hooks/useAuth';
 import { productsApi } from '../api/products';
+import { useCurrency } from '../hooks/useCurrency';
 import { toast } from 'sonner';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
+
   const storageKey = user?.id ? `walters_cart_${user.id}` : 'walters_cart_guest';
   const savedStorageKey = user?.id ? `walters_saved_${user.id}` : 'walters_saved_guest';
 
@@ -36,7 +42,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
-  // Revalidate cart items against live database stock levels
+  // Configuration Drawer State
+  const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
+  const [configItemIndex, setConfigItemIndex] = useState<number | null>(null);
+
+  // Sync Live Stock
   useEffect(() => {
     let isMounted = true;
 
@@ -56,6 +66,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   stock_quantity: match.stock_quantity,
                   price_full_gbp: match.price_full_gbp,
                   price_frame_only_gbp: match.price_frame_only_gbp,
+                  is_bestseller: match.is_bestseller,
                 },
               };
             }
@@ -72,7 +83,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => {
       isMounted = false;
     };
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isConfigDrawerOpen]);
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cartItems));
@@ -82,23 +93,76 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem(savedStorageKey, JSON.stringify(savedItems));
   }, [savedItems, savedStorageKey]);
 
-  const handleAddStandard = (product: Product) => {
+  const handleOpenConfigDrawer = (index: number) => {
+    if (index >= 0 && index < cartItems.length) {
+      setConfigItemIndex(index);
+      setIsConfigDrawerOpen(true);
+    }
+  };
+
+  const handleCloseConfigDrawer = () => {
+    setIsConfigDrawerOpen(false);
+    setConfigItemIndex(null);
+  };
+
+  const handleUpdateConfiguredItem = (
+    index: number,
+    purchaseType: PurchaseType,
+    quantity: number
+  ) => {
+    setCartItems((prev) =>
+      prev.map((item, idx) =>
+        idx === index
+          ? {
+              ...item,
+              purchaseType,
+              quantity,
+              isPendingConfig: false,
+            }
+          : item
+      )
+    );
+    toast.success('Updated item specifications in basket!');
+  };
+
+  // Defaults isFromCard to true so Quick Add flags item as pending details
+  const handleAddStandard = (product: Product, isFromCard = true, targetIndex?: number) => {
     let exceedsStock = false;
 
     setCartItems((prev) => {
-      const existing = prev.find(
-        (item) => item.product.id === product.id && item.purchaseType === 'standard'
+      if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < prev.length) {
+        return prev.map((item, idx) =>
+          idx === targetIndex
+            ? { ...item, product, purchaseType: 'standard', isPendingConfig: isFromCard }
+            : item
+        );
+      }
+
+      const pendingIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.isPendingConfig
       );
-      if (existing) {
-        if (existing.quantity >= product.stock_quantity) {
+      if (pendingIdx !== -1) {
+        return prev.map((item, idx) =>
+          idx === pendingIdx
+            ? { ...item, product, purchaseType: 'standard', isPendingConfig: isFromCard }
+            : item
+        );
+      }
+
+      const existingIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.purchaseType === 'standard' && !item.isPendingConfig
+      );
+      if (existingIdx !== -1) {
+        if (prev[existingIdx].quantity >= product.stock_quantity) {
           exceedsStock = true;
           return prev;
         }
-        return prev.map((item) =>
-          item === existing ? { ...item, quantity: item.quantity + 1 } : item
+        return prev.map((item, idx) =>
+          idx === existingIdx ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { product, quantity: 1, purchaseType: 'standard' }];
+
+      return [...prev, { product, quantity: 1, purchaseType: 'standard', isPendingConfig: isFromCard }];
     });
 
     if (exceedsStock) {
@@ -109,23 +173,43 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const handleAddFrameOnly = (product: Product) => {
+  const handleAddFrameOnly = (product: Product, isFromCard = true, targetIndex?: number) => {
     let exceedsStock = false;
 
     setCartItems((prev) => {
-      const existing = prev.find(
-        (item) => item.product.id === product.id && item.purchaseType === 'frames_only'
+      if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < prev.length) {
+        return prev.map((item, idx) =>
+          idx === targetIndex
+            ? { ...item, product, purchaseType: 'frames_only', isPendingConfig: isFromCard }
+            : item
+        );
+      }
+
+      const pendingIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.isPendingConfig
       );
-      if (existing) {
-        if (existing.quantity >= product.stock_quantity) {
+      if (pendingIdx !== -1) {
+        return prev.map((item, idx) =>
+          idx === pendingIdx
+            ? { ...item, product, purchaseType: 'frames_only', isPendingConfig: isFromCard }
+            : item
+        );
+      }
+
+      const existingIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.purchaseType === 'frames_only' && !item.isPendingConfig
+      );
+      if (existingIdx !== -1) {
+        if (prev[existingIdx].quantity >= product.stock_quantity) {
           exceedsStock = true;
           return prev;
         }
-        return prev.map((item) =>
-          item === existing ? { ...item, quantity: item.quantity + 1 } : item
+        return prev.map((item, idx) =>
+          idx === existingIdx ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { product, quantity: 1, purchaseType: 'frames_only' }];
+
+      return [...prev, { product, quantity: 1, purchaseType: 'frames_only', isPendingConfig: isFromCard }];
     });
 
     if (exceedsStock) {
@@ -149,24 +233,48 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const handleConfirmPrescription = (prescription: PrescriptionData) => {
     if (!selectedProduct) return;
 
-    if (editingItemIndex !== null) {
-      setCartItems((prev) =>
-        prev.map((item, i) =>
-          i === editingItemIndex ? { ...item, prescription } : item
-        )
+    setCartItems((prev) => {
+      if (editingItemIndex !== null && editingItemIndex >= 0 && editingItemIndex < prev.length) {
+        return prev.map((item, idx) =>
+          idx === editingItemIndex
+            ? { ...item, product: selectedProduct, purchaseType: 'prescription', prescription, isPendingConfig: false }
+            : item
+        );
+      }
+
+      const pendingIdx = prev.findIndex(
+        (item) => item.product.id === selectedProduct.id && item.isPendingConfig
       );
-      toast.success(`Updated prescription details for ${selectedProduct.name}`);
-      setEditingItemIndex(null);
-    } else {
-      setCartItems((prev) => [
+      if (pendingIdx !== -1) {
+        return prev.map((item, idx) =>
+          idx === pendingIdx
+            ? { ...item, product: selectedProduct, purchaseType: 'prescription', prescription, isPendingConfig: false }
+            : item
+        );
+      }
+
+      const existingIdx = prev.findIndex(
+        (item) => item.product.id === selectedProduct.id && item.purchaseType === 'prescription'
+      );
+      if (existingIdx !== -1) {
+        return prev.map((item, idx) =>
+          idx === existingIdx
+            ? { ...item, prescription, isPendingConfig: false }
+            : item
+        );
+      }
+
+      return [
         ...prev,
-        { product: selectedProduct, quantity: 1, purchaseType: 'prescription', prescription },
-      ]);
-      toast.success(`Prescription lenses added for ${selectedProduct.name}!`);
-      setIsDrawerOpen(true);
-    }
+        { product: selectedProduct, quantity: 1, purchaseType: 'prescription', prescription, isPendingConfig: false },
+      ];
+    });
+
+    toast.success(`Prescription details updated for ${selectedProduct.name}!`);
+    setIsDrawerOpen(true);
     setIsModalOpen(false);
     setSelectedProduct(null);
+    setEditingItemIndex(null);
   };
 
   const handleCloseModal = () => {
@@ -221,6 +329,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.info('Saved item removed');
   };
 
+  const activeConfigItem = configItemIndex !== null ? cartItems[configItemIndex] || null : null;
+
   return (
     <CartContext.Provider
       value={{
@@ -231,6 +341,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isModalOpen,
         selectedProduct,
         editingItemIndex,
+        isConfigDrawerOpen,
+        configItemIndex,
+        handleOpenConfigDrawer,
+        handleCloseConfigDrawer,
+        handleUpdateConfiguredItem,
         handleAddStandard,
         handleAddFrameOnly,
         handleSelectPrescription,
@@ -245,6 +360,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }}
     >
       {children}
+
       <CartDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
@@ -255,6 +371,27 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }}
         onRemove={handleRemoveItem}
       />
+
+      <CartItemConfigDrawer
+        isOpen={isConfigDrawerOpen}
+        onClose={handleCloseConfigDrawer}
+        itemIndex={configItemIndex}
+        cartItem={activeConfigItem}
+        onSaveConfig={handleUpdateConfiguredItem}
+        onOpenPrescriptionModal={(item, idx) => {
+          handleSelectPrescription(item.product, idx);
+        }}
+      />
+
+      {selectedProduct && (
+        <PrescriptionModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onConfirm={handleConfirmPrescription}
+          frameName={selectedProduct.name}
+          framePrice={formatPrice(selectedProduct.price_full_gbp)}
+        />
+      )}
     </CartContext.Provider>
   );
 };

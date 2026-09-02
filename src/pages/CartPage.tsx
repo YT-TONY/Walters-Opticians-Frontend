@@ -1,3 +1,4 @@
+// src/pages/CartPage.tsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
@@ -13,7 +14,8 @@ import {
   Bookmark,
   Trash2,
   Edit3,
-  AlertTriangle
+  AlertTriangle,
+  Flame
 } from 'lucide-react';
 
 export const Cart: React.FC = () => {
@@ -27,7 +29,7 @@ export const Cart: React.FC = () => {
     handleSaveForLater,
     handleMoveToCart,
     handleRemoveSavedItem,
-    handleSelectPrescription,
+    handleOpenConfigDrawer,
   } = useCart();
 
   const [isGift, setIsGift] = useState(false);
@@ -39,7 +41,7 @@ export const Cart: React.FC = () => {
   const getItemPrice = (item: typeof cartItems[0]) =>
     item.purchaseType === 'prescription'
       ? item.product.price_full_gbp
-      : item.product.price_frame_only_gbp;
+      : (item.product.price_frame_only_gbp ?? item.product.price_full_gbp);
 
   const rawSubtotal = cartItems.reduce(
     (acc, item) => (item.product.stock_quantity > 0 ? acc + getItemPrice(item) * item.quantity : acc),
@@ -116,20 +118,27 @@ export const Cart: React.FC = () => {
                   <div className="divide-y divide-walters-border">
                     {cartItems.map((item, idx) => {
                       const itemPrice = getItemPrice(item);
-                      const isOutOfStock = item.product.stock_quantity <= 0;
-                      const maxSelectable = Math.min(10, item.product.stock_quantity || 0);
+                      const stock = item.product.stock_quantity;
+                      const isOutOfStock = stock <= 0;
+                      const isLowStock = stock > 0 && stock < 8;
+                      const isPending = item.isPendingConfig;
+                      const maxSelectable = Math.min(10, stock || 0);
                       const optionsList = Array.from({ length: maxSelectable }, (_, i) => i + 1);
 
                       return (
                         <div
                           key={idx}
                           className={`p-5 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 transition-all ${
-                            isOutOfStock ? 'bg-red-50/20' : ''
+                            isOutOfStock
+                              ? 'bg-rose-50/20'
+                              : isPending
+                              ? 'bg-amber-100/80 border-l-4 border-l-amber-500'
+                              : ''
                           }`}
                         >
-                          {/* Image Thumbnail with Isolated Grayscale */}
+                          {/* Image Thumbnail */}
                           <div
-                            className={`w-24 h-24 bg-walters-cream rounded-lg p-2 shrink-0 flex items-center justify-center border border-walters-border ${
+                            className={`w-24 h-24 bg-walters-cream rounded-xl p-2 shrink-0 flex items-center justify-center border border-walters-border ${
                               isOutOfStock ? 'grayscale opacity-60' : ''
                             }`}
                           >
@@ -162,6 +171,14 @@ export const Cart: React.FC = () => {
                               </span>
                             </div>
 
+                            {/* Low Stock Urgency Banner */}
+                            {isLowStock && (
+                              <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300/80">
+                                <Flame className="w-3.5 h-3.5 text-amber-600 shrink-0 animate-pulse" />
+                                <span>Only {stock} items left in stock — order soon to secure your pair!</span>
+                              </div>
+                            )}
+
                             {/* Status Badges */}
                             {isOutOfStock ? (
                               <div className="inline-flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
@@ -170,14 +187,22 @@ export const Cart: React.FC = () => {
                               </div>
                             ) : (
                               <div className="flex flex-wrap gap-2 items-center">
-                                <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-walters-offwhite text-walters-navy">
-                                  {item.purchaseType === 'prescription'
-                                    ? 'Full Prescription Lenses'
-                                    : 'Frames Only (Demo Lenses)'}
-                                </span>
-                                <div className="text-[11px] font-medium text-amber-800 bg-amber-50/80 inline-block px-2 py-0.5 rounded border border-amber-200">
-                                  Popular item — {item.product.stock_quantity} units available in stock
-                                </div>
+                                {isPending ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenConfigDrawer(idx)}
+                                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-bold bg-amber-300 text-amber-950 border border-amber-400 hover:bg-amber-400 transition-colors cursor-pointer shadow-2xs"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-amber-900 shrink-0" />
+                                    <span>Finish Order</span>
+                                  </button>
+                                ) : (
+                                  <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-walters-offwhite text-walters-navy">
+                                    {item.purchaseType === 'prescription'
+                                      ? 'Full Prescription Lenses'
+                                      : 'Frames Only (Demo Lenses)'}
+                                  </span>
+                                )}
                               </div>
                             )}
 
@@ -204,17 +229,15 @@ export const Cart: React.FC = () => {
                                 <ChevronDown className="w-3.5 h-3.5 text-walters-navy absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                               </div>
 
-                              {/* Edit Option */}
-                              {!isOutOfStock && item.purchaseType === 'prescription' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSelectPrescription(item.product, idx)}
-                                  className="hover:underline flex items-center space-x-1 text-walters-navy cursor-pointer"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                  <span>Edit</span>
-                                </button>
-                              )}
+                              {/* Configure / Edit Link */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenConfigDrawer(idx)}
+                                className="hover:underline flex items-center space-x-1 text-walters-navy font-semibold cursor-pointer"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>{isPending ? 'Finish Order' : 'Edit Specs'}</span>
+                              </button>
 
                               {/* Save for later */}
                               <button
@@ -290,12 +313,14 @@ export const Cart: React.FC = () => {
 
                         <div className="flex items-center space-x-3 text-xs font-medium">
                           <button
+                            type="button"
                             onClick={() => handleMoveToCart(sIdx)}
                             className="px-3 py-1.5 bg-walters-navy text-white rounded-md hover:bg-walters-gold hover:text-walters-navy transition-all cursor-pointer"
                           >
                             Move to Basket
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleRemoveSavedItem(sIdx)}
                             className="p-1.5 text-walters-slate hover:text-red-600 cursor-pointer"
                           >

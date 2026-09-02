@@ -1,3 +1,4 @@
+//src/types/index.ts
 export interface User {
   id: string;
   email: string;
@@ -17,8 +18,23 @@ export interface Product {
   brand: string;
   shape: string;
   color_description: string;
+  color_code?: string;
   category?: string;
   description?: string;
+  gender?: string;
+  frame_material?: string;
+  lens_material?: string;
+  lens_color?: string;
+  glass_base?: string;
+  polarized?: boolean;
+  photochromic?: boolean;
+  gradables?: boolean;
+  lens_width?: number;
+  bridge_width?: number;
+  temple_length?: number;
+  lens_height?: number;
+  sizes?: string[];
+  size_chart_url?: string;
   price_full_gbp: number;
   price_frame_only_gbp: number;
   stock_quantity: number;

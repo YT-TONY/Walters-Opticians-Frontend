@@ -1,6 +1,8 @@
+// src/pages/admin/ProductModal.tsx
 import React, { useState } from 'react';
-import { X, Upload, Trash2, Plus } from 'lucide-react';
+import { X, Upload, Trash2, Plus, Sparkles } from 'lucide-react';
 import { type AdminProduct, type Gender, type FrameShape, type FrameType } from '../../types/admin';
+import { getPriceTier } from './StockInventoryTab';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -25,7 +27,7 @@ const getDefaultFormData = (product: AdminProduct | null) => ({
   glass_base: product?.glass_base ?? 'Base 4',
   polarized: product?.polarized ?? false,
   photochromic: product?.photochromic ?? false,
-  gradables: product?.gradables ?? false,
+  gradables: product?.gradables ?? true,
   is_bestseller: (product as { is_bestseller?: boolean })?.is_bestseller ?? false,
   lens_width: product?.lens_width ?? 54.0,
   bridge_width: product?.bridge_width ?? 17.0,
@@ -59,8 +61,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   if (!isOpen) return null;
 
+  const currentTier = getPriceTier(formData.price_full_gbp);
+
   const handleApplyBrandTemplate = () => {
-    const template = `Buy Now ${formData.gender === 'female' ? "Women's" : formData.gender === 'male' ? "Men's" : "Unisex"} Glasses Online ${formData.brand} ${formData.name} - ${formData.color_code || '8228'} ${formData.color} ${formData.shape}, at a reduced price at the best price Made in Italy New ${formData.brand} Collection. Visit our store.`;
+    const template = `Buy Now ${formData.gender === 'female' ? "Women's" : formData.gender === 'male' ? "Men's" : "Unisex"} Optical Eyewear ${formData.brand} ${formData.name} (${formData.model_code || 'Model'}) - Color ${formData.color_code || ''} ${formData.color} in ${formData.shape} shape. Premium ${formData.frame_material} frame crafted with precision. Exclusive ${formData.brand} Collection at Walters Opticians.`;
     setFormData((p) => ({ ...p, description: template }));
   };
 
@@ -138,9 +142,29 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         <div className="relative w-full max-w-3xl bg-cream rounded-2xl shadow-2xl border border-border p-6 space-y-4 my-8">
           
           <div className="flex items-center justify-between border-b border-border pb-3">
-            <h3 className="text-lg font-bold text-navy">
-              {editingProduct ? 'Edit Frame Details & Specifications' : 'Add New Optical Frame'}
-            </h3>
+            <div>
+              <h3 className="text-lg font-bold text-navy">
+                {editingProduct ? 'Edit Frame Details & Specifications' : 'Add New Optical Frame'}
+              </h3>
+              <div className="mt-1 flex items-center space-x-2">
+                <span className="text-[10px] text-slate font-medium">Calculated Price Category:</span>
+                {currentTier === 'luxury' && (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-200">
+                    Luxury Tier (≥ £200)
+                  </span>
+                )}
+                {currentTier === 'bridge' && (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-200">
+                    Bridge Tier (£100 - £200)
+                  </span>
+                )}
+                {currentTier === 'budget' && (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-200">
+                    Budget Tier (≤ £100)
+                  </span>
+                )}
+              </div>
+            </div>
             <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-offwhite cursor-pointer">
               <X className="w-5 h-5 text-slate" />
             </button>
@@ -151,7 +175,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             {/* Core Details */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-navy font-semibold mb-1">Model Code (Group Key)</label>
+                <label className="block text-navy font-semibold mb-1">Model Code</label>
                 <input
                   type="text"
                   placeholder="e.g. TF 2150-B"
@@ -253,18 +277,55 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <button
                   type="button"
                   onClick={handleApplyBrandTemplate}
-                  className="text-[11px] text-walters-navy underline hover:opacity-70 cursor-pointer font-medium"
+                  className="inline-flex items-center space-x-1 text-[11px] text-navy underline hover:text-gold cursor-pointer font-semibold"
                 >
-                  Apply Brand Description Template
+                  <Sparkles className="w-3 h-3 text-gold" />
+                  <span>Auto-Generate Description</span>
                 </button>
               </div>
               <textarea
                 rows={2}
-                placeholder="Buy Now Women's Glasses Online..."
+                placeholder="Buy Now Optical Glasses Online..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy resize-none"
               />
+            </div>
+
+            {/* Pricing & Stock */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-offwhite p-3 rounded-xl border border-border">
+              <div>
+                <label className="block text-navy font-semibold mb-1">Full Lens Price (£)</label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  value={formData.price_full_gbp}
+                  onChange={(e) => setFormData({ ...formData, price_full_gbp: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-navy font-semibold mb-1">Frame Only Price (£)</label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  value={formData.price_frame_only_gbp}
+                  onChange={(e) => setFormData({ ...formData, price_frame_only_gbp: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
+                />
+              </div>
+              <div>
+                <label className="block text-navy font-semibold mb-1">Stock Quantity</label>
+                <input
+                  type="number"
+                  required
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
+                />
+              </div>
             </div>
 
             {/* Optical Dimensions */}
@@ -274,7 +335,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-slate text-[11px] mb-0.5">Lens Length</label>
+                  <label className="block text-slate text-[11px] mb-0.5">Lens Width</label>
                   <input
                     type="number"
                     step="0.1"
@@ -284,7 +345,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-slate text-[11px] mb-0.5">Bridge</label>
+                  <label className="block text-slate text-[11px] mb-0.5">Bridge Width</label>
                   <input
                     type="number"
                     step="0.1"
@@ -294,7 +355,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-slate text-[11px] mb-0.5">Branch Length</label>
+                  <label className="block text-slate text-[11px] mb-0.5">Temple Length</label>
                   <input
                     type="number"
                     step="0.1"
@@ -304,7 +365,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-slate text-[11px] mb-0.5">Glass Height</label>
+                  <label className="block text-slate text-[11px] mb-0.5">Lens Height</label>
                   <input
                     type="number"
                     step="0.1"
@@ -355,7 +416,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
                   className="rounded text-[#1B75BC] focus:ring-[#1B75BC] cursor-pointer"
                 />
-                <span>Mark Bestseller Badge</span>
+                <span>Bestseller Badge</span>
               </label>
             </div>
 
@@ -388,40 +449,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Size</span>
                 </button>
-              </div>
-            </div>
-
-            {/* Pricing & Stock */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-offwhite p-3 rounded-xl border border-border">
-              <div>
-                <label className="block text-navy font-semibold mb-1">Price (Full Lens)</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.price_full_gbp}
-                  onChange={(e) => setFormData({ ...formData, price_full_gbp: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
-                />
-              </div>
-              <div>
-                <label className="block text-navy font-semibold mb-1">Price (Frame Only)</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.price_frame_only_gbp}
-                  onChange={(e) => setFormData({ ...formData, price_frame_only_gbp: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
-                />
-              </div>
-              <div>
-                <label className="block text-navy font-semibold mb-1">Stock</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-white border border-border rounded-lg text-charcoal focus:outline-none focus:border-navy"
-                />
               </div>
             </div>
 
@@ -458,7 +485,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-navy font-semibold mb-1">Gallery</label>
+                <label className="block text-navy font-semibold mb-1">Gallery Images</label>
                 <div className="flex flex-wrap items-center gap-3">
                   {formData.gallery.map((imgUrl, index) => (
                     <div key={index} className="relative w-12 h-12 rounded-lg bg-offwhite border border-border overflow-hidden shrink-0">

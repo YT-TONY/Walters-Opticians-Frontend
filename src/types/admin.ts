@@ -58,3 +58,70 @@ export interface Order {
   totalGbp: number;
   date: string;
 }
+
+export interface SalesTrendPoint {
+  date: string;
+  orders_count: number;
+  revenue: number;
+}
+
+export interface TopMovingProduct {
+  product_id: number;
+  name: string;
+  brand: string;
+  image_url?: string;
+  total_quantity_sold: number;
+  total_revenue: number;
+}
+
+export interface SlowMovingProduct {
+  product_id: number;
+  name: string;
+  brand: string;
+  image_url?: string;
+  stock_quantity: number;
+  price_full_gbp: number;
+}
+
+export interface MarketOverviewAnalytics {
+  total_revenue: number;
+  total_orders: number;
+  pending_orders_count: number;
+  low_stock_count: number;
+  total_appointments: number;
+  unread_notifications: number;
+  sales_trend: SalesTrendPoint[];
+  top_moving_products: TopMovingProduct[];
+  slow_moving_products: SlowMovingProduct[];
+}
+
+export interface BrandProductItem {
+  id: number;
+  name: string;
+  brand: string;
+  stock_quantity: number;
+  price_full_gbp: number;
+  price_frame_only_gbp: number;
+  image_url: string;
+  is_low_stock: boolean;
+  is_out_of_stock: boolean;
+}
+
+export interface BrandInventoryGroup {
+  brand_name: string;
+  total_items_count: number;
+  low_stock_count: number;
+  products: BrandProductItem[];
+}
+
+export interface StoreSettingsRates {
+  standard_lens_fee: number;
+  eye_exam_fee: number;
+  uk_base_shipping: number;
+  eu_base_shipping: number;
+  intl_base_shipping: number;
+  low_stock_threshold: number;
+  promo_banner_text?: string;
+  promo_banner_active?: boolean;
+  featured_category?: string;
+}

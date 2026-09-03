@@ -1,8 +1,10 @@
 // src/pages/admin/StockInventoryTab.tsx
-import React from 'react';
-import { Package, Plus, AlertTriangle, Edit3, Trash2, Search, Filter, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Package, Plus, AlertTriangle, Edit3, Trash2, Search, Filter, ChevronLeft, ChevronRight, Loader2, Tag } from 'lucide-react';
 import { type AdminProduct } from '../../types/admin';
 import { formatPrice } from '../../utils/formatter';
+
+export type PriceTier = 'all' | 'luxury' | 'bridge' | 'budget';
 
 interface StockInventoryTabProps {
   products: AdminProduct[];
@@ -23,6 +25,12 @@ interface StockInventoryTabProps {
   onPageChange?: (page: number) => void;
 }
 
+export const getPriceTier = (price: number): 'luxury' | 'bridge' | 'budget' => {
+  if (price >= 200) return 'luxury';
+  if (price >= 100) return 'bridge';
+  return 'budget';
+};
+
 export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
   products,
   availableBrands,
@@ -39,13 +47,21 @@ export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
   totalCount,
   onPageChange,
 }) => {
-  const displayTotal = totalCount !== undefined ? totalCount : products.length;
+  const [selectedTier, setSelectedTier] = useState<PriceTier>('all');
+
+  // Client-side Tier Filter
+  const filteredProducts = products.filter((p) => {
+    if (selectedTier === 'all') return true;
+    return getPriceTier(p.price_full_gbp) === selectedTier;
+  });
+
+  const displayTotal = totalCount !== undefined ? totalCount : filteredProducts.length;
 
   return (
     <div className="space-y-4 font-sans text-charcoal antialiased">
       
       {/* Search, Filter, and Action Toolbar */}
-      <div className="p-4 bg-cream rounded-2xl border border-border space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+      <div className="p-4 bg-cream rounded-2xl border border-border space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
         
         {/* Real-time Search Input */}
         <div className="relative flex-1 w-full">
@@ -53,22 +69,37 @@ export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search 12,000+ frames by model name, brand, or color..."
+            placeholder="Search frames by model code, brand, color, or shape..."
             className="w-full bg-white border border-border rounded-xl py-2 pl-9 pr-4 text-xs text-navy placeholder-slate/60 focus:outline-none focus:border-navy transition-all"
           />
           <Search className="w-4 h-4 text-slate/60 absolute left-3 top-1/2 -translate-y-1/2" />
         </div>
 
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Price Tier Dropdown Filter */}
+          <div className="flex items-center space-x-1.5 flex-1 sm:flex-initial">
+            <Tag className="w-4 h-4 text-navy shrink-0" />
+            <select
+              value={selectedTier}
+              onChange={(e) => setSelectedTier(e.target.value as PriceTier)}
+              className="w-full sm:w-36 bg-white border border-border text-navy rounded-xl px-2.5 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Tiers</option>
+              <option value="luxury">Luxury (≥ £200)</option>
+              <option value="bridge">Bridge (£100-£200)</option>
+              <option value="budget">Budget (≤ £100)</option>
+            </select>
+          </div>
+
           {/* Dynamic Brand Dropdown Filter */}
           <div className="flex items-center space-x-1.5 flex-1 sm:flex-initial">
             <Filter className="w-4 h-4 text-navy shrink-0" />
             <select
               value={selectedBrand}
               onChange={(e) => onBrandChange(e.target.value)}
-              className="w-full sm:w-56 bg-white border border-border text-navy rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
+              className="w-full sm:w-44 bg-white border border-border text-navy rounded-xl px-2.5 py-2 text-xs font-semibold focus:outline-none cursor-pointer"
             >
-              <option value="all">All Brands ({availableBrands.length} in DB)</option>
+              <option value="all">All Brands ({availableBrands.length})</option>
               {availableBrands.map((b) => (
                 <option key={b} value={b}>
                   {b}
@@ -97,7 +128,7 @@ export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
             <thead className="bg-offwhite border-b border-border text-[11px] font-semibold uppercase tracking-wider text-slate">
               <tr>
                 <th className="py-3 px-4">Frame</th>
-                <th className="py-3 px-4">Details</th>
+                <th className="py-3 px-4">Tier & Details</th>
                 <th className="py-3 px-4">Type & Shape</th>
                 <th className="py-3 px-4">Stock Level</th>
                 <th className="py-3 px-4">Price (Full / Frame)</th>
@@ -112,16 +143,18 @@ export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
                     Querying optical inventory database...
                   </td>
                 </tr>
-              ) : products.length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate">
                     <Package className="w-8 h-8 mx-auto mb-2 text-slate/40" />
-                    No optical frames match your search or brand criteria.
+                    No optical frames match your search or tier filter criteria.
                   </td>
                 </tr>
               ) : (
-                products.map((p) => {
+                filteredProducts.map((p) => {
                   const isLowStock = p.stock <= 5;
+                  const tier = getPriceTier(p.price_full_gbp);
+
                   return (
                     <tr key={p.id} className={`hover:bg-[#FDFBF7] transition-colors ${isLowStock ? 'bg-rose-50/40' : ''}`}>
                       
@@ -136,21 +169,45 @@ export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
                             )}
                           </div>
                           <div>
-                            <p className="font-bold text-navy">{p.name}</p>
+                            <div className="flex items-center space-x-1.5">
+                              <p className="font-bold text-navy">{p.name}</p>
+                              {p.model_code && (
+                                <span className="text-[10px] bg-offwhite border border-border text-slate px-1.5 py-0.2 rounded font-mono">
+                                  {p.model_code}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11px] font-semibold text-gold">{p.brand}</p>
                           </div>
                         </div>
                       </td>
 
-                      {/* Color & Gender */}
-                      <td className="py-3 px-4">
-                        <p className="text-navy font-medium">{p.color || 'N/A'}</p>
+                      {/* Tier Badge, Color & Gender */}
+                      <td className="py-3 px-4 space-y-1">
+                        <div>
+                          {tier === 'luxury' && (
+                            <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-200">
+                              Luxury Tier
+                            </span>
+                          )}
+                          {tier === 'bridge' && (
+                            <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-200">
+                              Bridge Tier
+                            </span>
+                          )}
+                          {tier === 'budget' && (
+                            <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-200">
+                              Budget Tier
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-navy font-medium text-[11px]">{p.color || 'N/A'}</p>
                         <p className="text-[10px] text-slate capitalize">{p.gender}</p>
                       </td>
 
                       {/* Type & Shape */}
                       <td className="py-3 px-4">
-                        <span className="inline-block px-2 py-0.5 text-[10px] rounded font-semibold bg-offwhite text-navy uppercase">
+                        <span className="inline-block px-2 py-0.5 text-[10px] rounded font-semibold bg-offwhite text-navy uppercase border border-border">
                           {p.frameType}
                         </span>
                         <p className="text-[10px] text-slate capitalize mt-0.5">{p.shape}</p>
@@ -209,7 +266,7 @@ export const StockInventoryTab: React.FC<StockInventoryTabProps> = ({
         {onPageChange && totalPages > 1 && (
           <div className="p-4 bg-offwhite border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate">
             <div>
-              Showing <strong className="text-navy">{products.length}</strong> of <strong className="text-navy">{displayTotal.toLocaleString()}</strong> frames (Page {currentPage} of {totalPages})
+              Showing <strong className="text-navy">{filteredProducts.length}</strong> of <strong className="text-navy">{displayTotal.toLocaleString()}</strong> frames (Page {currentPage} of {totalPages})
             </div>
 
             <div className="flex items-center space-x-2">

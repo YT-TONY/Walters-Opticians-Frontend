@@ -1,6 +1,6 @@
-//src/App.tsx
+// src/App.tsx
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useCurrency } from './hooks/useCurrency';
 import { useCart } from './hooks/useCart';
@@ -20,7 +20,7 @@ import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 
-// Pages
+// Customer Pages
 import { Catalog } from './pages/Catalog';
 import { ProductDetail } from './pages/ProductDetail';
 import { Login } from './pages/Login';
@@ -29,11 +29,20 @@ import { Cart } from './pages/CartPage';
 import { Checkout } from './pages/Checkout';
 import { OrderSuccess } from './pages/OrderSucess';
 import { Profile } from './pages/Profile';
-import { AdminDashboard } from './pages/admin/Dashboard';
+
+// Admin Portal Layout & Sub-Pages
+import { AdminLayout } from './components/admin/AdminLayout';
+import { AdminOverview } from './pages/admin/Overview';
+import { AdminStockInventory } from './pages/admin/StockInventory';
+import { OrdersTab } from './pages/admin/OrdersTab';
+import { BookingsTab } from './pages/admin/BookingsTab';
+import { AdminMarketOverview } from './pages/admin/MarketOverview';
+import { AdminSettings } from './pages/admin/Adminsettings'; // adjusted import casing to match filesystem
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const { formatPrice } = useCurrency();
+  const location = useLocation();
 
   const { 
     cartItems, 
@@ -44,6 +53,9 @@ const AppContent: React.FC = () => {
     handleClearCart
   } = useCart();
 
+  // Suppress public store header and floating chatbot inside the admin portal
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   // Helper redirect target based on user role
   const authenticatedRedirect = isAdmin ? "/admin/dashboard" : "/";
 
@@ -51,11 +63,12 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-cream flex flex-col font-sans text-charcoal">
       <Toaster position="bottom-right" richColors />
 
-      {/* Render Navbar */}
-      <Navbar />
+      {/* Render Public Navbar only for store routes */}
+      {!isAdminRoute && <Navbar />}
 
       <main className="grow">
         <Routes>
+          {/* Storefront Routes */}
           <Route 
             path="/" 
             element={
@@ -67,8 +80,6 @@ const AppContent: React.FC = () => {
           />
           
           <Route path="/product/:id" element={<ProductDetail />} />
-
-          {/* Cart Route (Consumes useCart directly in CartPage) */}
           <Route path="/cart" element={<Cart />} />
 
           <Route 
@@ -84,18 +95,23 @@ const AppContent: React.FC = () => {
           <Route path="/order-success/:orderId" element={<OrderSuccess />} />
           <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
 
-          {/* Alias /admin to /admin/dashboard */}
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-
-          {/* Admin Protected Route */}
+          {/* Admin Redesign Nested Routes */}
           <Route 
-            path="/admin/dashboard" 
+            path="/admin" 
             element={
               <ProtectedRoute requireAdmin={true}>
-                <AdminDashboard />
+                <AdminLayout />
               </ProtectedRoute>
-            } 
-          />
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="inventory" element={<AdminStockInventory />} />
+            <Route path="orders" element={<OrdersTab orders={[]} />} />
+            <Route path="bookings" element={<BookingsTab bookings={[]} onToggleStatus={() => {}} />} />
+            <Route path="analytics" element={<AdminMarketOverview />} />
+            <Route path="settings" element={<AdminSettings />} /> {/* <-- Added Route */}
+          </Route>
         </Routes>
       </main>
 
@@ -109,8 +125,8 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* Global AI Chatbot */}
-      <ChatBot />
+      {/* Global AI Chatbot (Only active on storefront) */}
+      {!isAdminRoute && <ChatBot />}
     </div>
   );
 };

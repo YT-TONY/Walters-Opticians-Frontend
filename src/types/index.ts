@@ -1,4 +1,3 @@
-//src/types/index.ts
 export interface User {
   id: string;
   email: string;
@@ -39,6 +38,8 @@ export interface Product {
   price_frame_only_gbp: number;
   stock_quantity: number;
   is_active: boolean;
+  is_featured?: boolean;
+  is_bestseller?: boolean;
   image_url?: string;
   gallery?: string[];
   images?: string[];
@@ -64,4 +65,5 @@ export interface CartItem {
   quantity: number;
   purchaseType: PurchaseType;
   prescription?: PrescriptionData;
+  isPendingConfig?: boolean;
 }

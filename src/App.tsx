@@ -37,7 +37,7 @@ import { AdminStockInventory } from './pages/admin/StockInventory';
 import { OrdersTab } from './pages/admin/OrdersTab';
 import { BookingsTab } from './pages/admin/BookingsTab';
 import { AdminMarketOverview } from './pages/admin/MarketOverview';
-import { AdminSettings } from './pages/admin/Adminsettings'; // adjusted import casing to match filesystem
+import { AdminSettings } from './pages/admin/Adminsettings';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -107,10 +107,10 @@ const AppContent: React.FC = () => {
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminOverview />} />
             <Route path="inventory" element={<AdminStockInventory />} />
-            <Route path="orders" element={<OrdersTab orders={[]} />} />
+            <Route path="orders" element={<OrdersTab />} />
             <Route path="bookings" element={<BookingsTab bookings={[]} onToggleStatus={() => {}} />} />
             <Route path="analytics" element={<AdminMarketOverview />} />
-            <Route path="settings" element={<AdminSettings />} /> {/* <-- Added Route */}
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Routes>
       </main>

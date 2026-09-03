@@ -1,4 +1,4 @@
-//src/pages/admin/OrdersTab.tsx
+// src/pages/admin/OrdersTab.tsx
 import React, { useEffect, useState } from 'react';
 import { 
   ShoppingBag, 
@@ -20,12 +20,8 @@ import {
   Download
 } from 'lucide-react';
 import { useOrders } from '../../hooks/useOrder';
-import { type AdminOrder } from '../../context/OrderContext';
+import type { AdminOrder, AdminOrderItem } from '../../context/OrderContext';
 import { formatPrice } from '../../utils/formatter';
-
-interface OrdersTabProps {
-  orders: AdminOrder[];
-}
 
 const PrescriptionBadge: React.FC<{ status?: string }> = ({ status }) => {
   const normalized = (status || '').toLowerCase().replace(/_/g, ' ');
@@ -88,8 +84,9 @@ const PrescriptionBadge: React.FC<{ status?: string }> = ({ status }) => {
   }
 };
 
-export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
+export const OrdersTab: React.FC = () => {
   const { 
+    orders,
     isLoading, 
     refreshOrders, 
     updateOrderStatus, 
@@ -150,6 +147,41 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
     }
   };
 
+  const cleanTitle = (title?: string | null): string => {
+    if (!title) return 'Optical Frame Item';
+    return title.replace(/\s*\(\+\d+\s*more items\)/gi, '').trim();
+  };
+
+  const getAdminOrderItems = (order: AdminOrder): AdminOrderItem[] => {
+    if (order.items && order.items.length > 0) {
+      return order.items.map((item) => ({
+        ...item,
+        productName: cleanTitle(item.productName),
+      }));
+    }
+    return [
+      {
+        productId: order.productId,
+        productName: cleanTitle(order.productName),
+        productBrand: order.productBrand,
+        productImageUrl: order.productImageUrl,
+        quantity: order.itemsCount || 1,
+        orderType: order.orderType || 'frame_only',
+        framePrice: order.framePrice || order.totalGbp,
+        lensFee: order.lensFee,
+        prescriptionStatus: order.prescriptionStatus,
+        prescriptionFileUrl: order.prescriptionFileUrl,
+        rightSph: order.rightSph,
+        rightCyl: order.rightCyl,
+        rightAxis: order.rightAxis,
+        leftSph: order.leftSph,
+        leftCyl: order.leftCyl,
+        leftAxis: order.leftAxis,
+        pdMm: order.pdMm,
+      },
+    ];
+  };
+
   return (
     <div className="mt-8 space-y-4 font-sans text-walters-charcoal antialiased">
       <div className="flex items-center justify-between">
@@ -197,6 +229,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
               ) : (
                 orders.map((ord) => {
                   const isRowLoading = actionLoadingId === ord.id;
+                  const itemList = getAdminOrderItems(ord);
 
                   return (
                     <tr key={ord.id} className="hover:bg-walters-cream transition-colors">
@@ -216,10 +249,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
                       <td className="py-3 px-4">
                         <div className="space-y-1">
                           <span className="font-semibold text-walters-navy block truncate max-w-40">
-                            {ord.productName || 'Optical Frame Item'}
+                            {cleanTitle(ord.productName)}
                           </span>
                           <p className="text-[10px] text-walters-slate">
-                            {ord.productBrand || 'Walters Opticians'} • Qty: {ord.itemsCount || 1}
+                            {ord.productBrand || 'Walters Opticians'} • {itemList.length} item(s)
                           </p>
                           <button
                             type="button"
@@ -332,7 +365,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
         </div>
       </div>
 
-      {/* Aesthetic Clinical Review Order Modal */}
+      {/* Aesthetic Clinical Review Order Modal with Multi-Product Batch Loop */}
       {selectedOrderForReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-walters-navy/50 backdrop-blur-xs">
           <div className="w-full max-w-2xl bg-white border border-walters-border rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]">
@@ -359,109 +392,121 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
               </button>
             </div>
 
-            {/* Product Card Showcase */}
-            <div className="bg-walters-cream p-4 rounded-2xl border border-walters-border flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-20 h-20 bg-white border border-walters-border rounded-xl p-2 shrink-0 flex items-center justify-center overflow-hidden">
-                {selectedOrderForReview.productImageUrl ? (
-                  <img
-                    src={selectedOrderForReview.productImageUrl}
-                    alt={selectedOrderForReview.productName}
-                    className="object-contain max-h-full"
-                  />
-                ) : (
-                  <span className="font-serif font-bold text-xl text-walters-navy/30">W</span>
-                )}
-              </div>
-              <div className="flex-1 space-y-1">
-                <span className="text-[10px] font-semibold text-walters-slate uppercase tracking-wider">
-                  {selectedOrderForReview.productBrand || 'Walters Opticians'}
-                </span>
-                <h4 className="font-serif font-bold text-base text-walters-navy">
-                  {selectedOrderForReview.productName || 'Optical Frame Item'} <span className="text-xs font-normal text-walters-slate">× {selectedOrderForReview.itemsCount || 1}</span>
-                </h4>
-                <div className="inline-block px-2.5 py-0.5 rounded-md text-[10px] font-semibold bg-walters-offwhite text-walters-navy border border-walters-border">
-                  {formatOrderType(selectedOrderForReview.orderType)}
-                </div>
-              </div>
-            </div>
+            {/* Iterated Product Cards for Multi-Item Orders */}
+            <div className="space-y-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-walters-slate block">
+                Batch Products & Optical Specs ({getAdminOrderItems(selectedOrderForReview).length} Item(s))
+              </span>
 
-            {/* Prescription Optical Specs (Clinical Table Matrix) */}
-            <div className="bg-white p-4 rounded-2xl border border-walters-border space-y-3">
-              <div className="flex items-center justify-between border-b border-walters-border pb-2">
-                <div className="flex items-center space-x-2">
-                  <FlaskConical className="w-4 h-4 text-walters-navy" />
-                  <h4 className="font-semibold text-xs uppercase tracking-wider text-walters-navy">
-                    Clinical Optical Prescription
-                  </h4>
-                </div>
-                <PrescriptionBadge status={selectedOrderForReview.prescriptionStatus} />
-              </div>
-
-              {/* Uploaded File Action Button */}
-              {selectedOrderForReview.prescriptionFileUrl && (
-                <div className="p-3 bg-walters-offwhite rounded-xl border border-walters-border flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="w-4 h-4 text-walters-navy" />
-                    <span className="font-medium text-walters-navy">Customer Uploaded Rx Document</span>
-                  </div>
-                  <a
-                    href={selectedOrderForReview.prescriptionFileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3 py-1.5 bg-walters-navy text-white text-[10px] font-semibold rounded-md hover:bg-walters-gold hover:text-walters-navy transition-all flex items-center space-x-1"
-                  >
-                    <Download className="w-3 h-3" />
-                    <span>View / Download File</span>
-                  </a>
-                </div>
-              )}
-
-              {/* Manual Rx Table (OD / OS Matrix) */}
-              {(selectedOrderForReview.rightSph !== undefined || selectedOrderForReview.leftSph !== undefined) ? (
-                <div className="overflow-x-auto pt-1">
-                  <table className="w-full text-center text-xs border border-walters-border rounded-lg">
-                    <thead className="bg-walters-offwhite font-semibold text-walters-navy border-b border-walters-border text-[10px] uppercase">
-                      <tr>
-                        <th className="py-2 px-3 text-left">Eye</th>
-                        <th className="py-2 px-3">Sphere (SPH)</th>
-                        <th className="py-2 px-3">Cylinder (CYL)</th>
-                        <th className="py-2 px-3">Axis</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-walters-border text-walters-navy font-mono text-[11px]">
-                      <tr>
-                        <td className="py-2 px-3 text-left font-sans font-bold text-walters-navy bg-walters-cream/40">
-                          OD (Right)
-                        </td>
-                        <td className="py-2 px-3">{selectedOrderForReview.rightSph ?? '0.00'}</td>
-                        <td className="py-2 px-3">{selectedOrderForReview.rightCyl ?? '0.00'}</td>
-                        <td className="py-2 px-3">{selectedOrderForReview.rightAxis ?? '0'}°</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 px-3 text-left font-sans font-bold text-walters-navy bg-walters-cream/40">
-                          OS (Left)
-                        </td>
-                        <td className="py-2 px-3">{selectedOrderForReview.leftSph ?? '0.00'}</td>
-                        <td className="py-2 px-3">{selectedOrderForReview.leftCyl ?? '0.00'}</td>
-                        <td className="py-2 px-3">{selectedOrderForReview.leftAxis ?? '0'}°</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  {selectedOrderForReview.pdMm !== undefined && (
-                    <div className="mt-2 text-[11px] text-walters-slate flex items-center justify-end space-x-2">
-                      <span>Pupillary Distance (PD):</span>
-                      <strong className="font-mono text-walters-navy font-bold bg-walters-cream px-2 py-0.5 rounded border border-walters-border">
-                        {selectedOrderForReview.pdMm} mm
-                      </strong>
+              {getAdminOrderItems(selectedOrderForReview).map((item, index) => (
+                <div key={item.id || index} className="space-y-3 bg-walters-cream/60 p-4 rounded-2xl border border-walters-border">
+                  {/* Product Card Showcase */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="w-20 h-20 bg-white border border-walters-border rounded-xl p-2 shrink-0 flex items-center justify-center overflow-hidden">
+                      {item.productImageUrl ? (
+                        <img
+                          src={item.productImageUrl}
+                          alt={item.productName || 'Optical Item'}
+                          className="object-contain max-h-full"
+                        />
+                      ) : (
+                        <span className="font-serif font-bold text-xl text-walters-navy/30">W</span>
+                      )}
                     </div>
-                  )}
+                    <div className="flex-1 space-y-1">
+                      <span className="text-[10px] font-semibold text-walters-slate uppercase tracking-wider">
+                        {item.productBrand || 'Walters Opticians'}
+                      </span>
+                      <h4 className="font-serif font-bold text-base text-walters-navy">
+                        {item.productName || 'Optical Frame Item'}{' '}
+                        <span className="text-xs font-normal text-walters-slate">× {item.quantity || 1}</span>
+                      </h4>
+                      <div className="inline-block px-2.5 py-0.5 rounded-md text-[10px] font-semibold bg-white text-walters-navy border border-walters-border">
+                        {formatOrderType(item.orderType)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prescription Optical Specs Matrix for this Item */}
+                  <div className="bg-white p-3.5 rounded-xl border border-walters-border space-y-2">
+                    <div className="flex items-center justify-between border-b border-walters-border pb-1.5">
+                      <div className="flex items-center space-x-1.5">
+                        <FlaskConical className="w-3.5 h-3.5 text-walters-navy" />
+                        <h5 className="font-semibold text-[11px] uppercase tracking-wider text-walters-navy">
+                          Item #{index + 1} Clinical Prescription
+                        </h5>
+                      </div>
+                      <PrescriptionBadge status={item.prescriptionStatus || selectedOrderForReview.prescriptionStatus} />
+                    </div>
+
+                    {/* Uploaded File Action Button */}
+                    {item.prescriptionFileUrl && (
+                      <div className="p-2.5 bg-walters-offwhite rounded-lg border border-walters-border flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-3.5 h-3.5 text-walters-navy" />
+                          <span className="font-medium text-walters-navy">Uploaded Rx File</span>
+                        </div>
+                        <a
+                          href={item.prescriptionFileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 bg-walters-navy text-white text-[10px] font-semibold rounded hover:bg-walters-gold hover:text-walters-navy transition-all flex items-center space-x-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>View File</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Manual Rx Table (OD / OS Matrix) */}
+                    {(item.rightSph !== undefined || item.leftSph !== undefined) ? (
+                      <div className="overflow-x-auto pt-1">
+                        <table className="w-full text-center text-xs border border-walters-border rounded-lg">
+                          <thead className="bg-walters-offwhite font-semibold text-walters-navy border-b border-walters-border text-[10px] uppercase">
+                            <tr>
+                              <th className="py-1 px-2 text-left">Eye</th>
+                              <th className="py-1 px-2">Sphere (SPH)</th>
+                              <th className="py-1 px-2">Cylinder (CYL)</th>
+                              <th className="py-1 px-2">Axis</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-walters-border text-walters-navy font-mono text-[10px]">
+                            <tr>
+                              <td className="py-1 px-2 text-left font-sans font-bold text-walters-navy bg-walters-cream/40">
+                                OD (Right)
+                              </td>
+                              <td className="py-1 px-2">{item.rightSph ?? '0.00'}</td>
+                              <td className="py-1 px-2">{item.rightCyl ?? '0.00'}</td>
+                              <td className="py-1 px-2">{item.rightAxis ?? '0'}°</td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 px-2 text-left font-sans font-bold text-walters-navy bg-walters-cream/40">
+                                OS (Left)
+                              </td>
+                              <td className="py-1 px-2">{item.leftSph ?? '0.00'}</td>
+                              <td className="py-1 px-2">{item.leftCyl ?? '0.00'}</td>
+                              <td className="py-1 px-2">{item.leftAxis ?? '0'}°</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        {item.pdMm !== undefined && (
+                          <div className="mt-1 text-[10px] text-walters-slate flex items-center justify-end space-x-1.5">
+                            <span>Pupillary Distance (PD):</span>
+                            <strong className="font-mono text-walters-navy font-bold bg-walters-cream px-1.5 py-0.5 rounded border border-walters-border">
+                              {item.pdMm} mm
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+                    ) : !item.prescriptionFileUrl && (
+                      <p className="text-[11px] text-walters-slate italic py-0.5">
+                        No custom prescription attached (Frames Only / Demo Lenses).
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ) : !selectedOrderForReview.prescriptionFileUrl && (
-                <p className="text-xs text-walters-slate italic py-1">
-                  No custom prescription parameters attached to this order (Non-Prescription / Demo Lenses).
-                </p>
-              )}
+              ))}
             </div>
 
             {/* Financial Breakdown Grid */}
@@ -471,31 +516,41 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
               </span>
 
               <div className="flex justify-between text-walters-slate">
-                <span>Frame Price</span>
-                <span className="font-semibold text-walters-navy tabular-nums">{formatPrice(selectedOrderForReview.framePrice || selectedOrderForReview.totalGbp)}</span>
+                <span>Frame Subtotal</span>
+                <span className="font-semibold text-walters-navy tabular-nums">
+                  {formatPrice(selectedOrderForReview.framePrice || selectedOrderForReview.totalGbp)}
+                </span>
               </div>
               {selectedOrderForReview.lensFee > 0 && (
                 <div className="flex justify-between text-walters-slate">
                   <span>Prescription Lens Fee</span>
-                  <span className="font-semibold text-walters-navy tabular-nums">{formatPrice(selectedOrderForReview.lensFee)}</span>
+                  <span className="font-semibold text-walters-navy tabular-nums">
+                    {formatPrice(selectedOrderForReview.lensFee)}
+                  </span>
                 </div>
               )}
               {selectedOrderForReview.examFee > 0 && (
                 <div className="flex justify-between text-walters-slate">
                   <span>In-Clinic Exam Fee</span>
-                  <span className="font-semibold text-walters-navy tabular-nums">{formatPrice(selectedOrderForReview.examFee)}</span>
+                  <span className="font-semibold text-walters-navy tabular-nums">
+                    {formatPrice(selectedOrderForReview.examFee)}
+                  </span>
                 </div>
               )}
               {selectedOrderForReview.shippingFee > 0 && (
                 <div className="flex justify-between text-walters-slate">
                   <span>Shipping & Handling</span>
-                  <span className="font-semibold text-walters-navy tabular-nums">{formatPrice(selectedOrderForReview.shippingFee)}</span>
+                  <span className="font-semibold text-walters-navy tabular-nums">
+                    {formatPrice(selectedOrderForReview.shippingFee)}
+                  </span>
                 </div>
               )}
 
               <div className="border-t border-walters-border pt-2 flex justify-between items-baseline text-sm font-bold text-walters-navy">
                 <span>Total Amount Paid</span>
-                <span className="font-serif text-lg text-walters-navy tabular-nums">{formatPrice(selectedOrderForReview.totalGbp)}</span>
+                <span className="font-serif text-lg text-walters-navy tabular-nums">
+                  {formatPrice(selectedOrderForReview.totalGbp)}
+                </span>
               </div>
             </div>
 
@@ -504,7 +559,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
               <MapPin className="w-4 h-4 text-walters-navy shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold text-walters-navy block">Shipping Destination</span>
-                <p className="text-walters-slate mt-0.5">{selectedOrderForReview.shippingAddress || 'No shipping address provided'}</p>
+                <p className="text-walters-slate mt-0.5">
+                  {selectedOrderForReview.shippingAddress || 'No shipping address provided'}
+                </p>
                 <p className="text-walters-slate font-medium uppercase mt-0.5">{selectedOrderForReview.country}</p>
               </div>
             </div>

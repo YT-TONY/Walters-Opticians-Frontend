@@ -1,12 +1,10 @@
+// src/api/orders.ts
 import { apiClient } from './client';
 
-export interface BackendOrderCreate {
+export interface BackendOrderItem {
   product_id: number;
   quantity: number;
   order_type: 'frame_only' | 'upload_prescription' | 'manual_prescription' | 'book_appointment';
-  shipping_address: string;
-  country: string;
-  appointment_date?: string | null;
   prescription_file_url?: string | null;
   right_sph?: number | null;
   right_cyl?: number | null;
@@ -15,18 +13,27 @@ export interface BackendOrderCreate {
   left_cyl?: number | null;
   left_axis?: number | null;
   pd_mm?: number | null;
+
+  // Detailed Product Metadata (populated by response)
+  product_name?: string | null;
+  product_brand?: string | null;
+  product_image_url?: string | null;
+  frame_price?: number;
+  lens_fee?: number;
+}
+
+export interface BackendOrderCreate {
+  shipping_address: string;
+  country: string;
+  appointment_date?: string | null;
+  items: BackendOrderItem[];
 }
 
 export interface BackendOrderResponse {
   id: number;
   reference_id: string;
-  product_id: number;
-  quantity: number;
-  order_type: string;
   country: string;
   shipping_address: string;
-  frame_price: number;
-  lens_fee: number;
   exam_fee: number;
   shipping_fee: number;
   total_amount: number;
@@ -37,13 +44,19 @@ export interface BackendOrderResponse {
   shipping_label_url?: string | null;
   appointment_date?: string | null;
   created_at: string;
+  
+  // Grouped items array for batch orders
+  items?: BackendOrderItem[];
 
-  // Detailed Product Metadata
+  // Fallback flat fields for legacy/single item responses
+  product_id?: number;
+  quantity?: number;
+  order_type?: string;
   product_name?: string | null;
   product_brand?: string | null;
   product_image_url?: string | null;
-
-  // Prescription Specs
+  frame_price?: number;
+  lens_fee?: number;
   prescription_file_url?: string | null;
   right_sph?: number | null;
   right_cyl?: number | null;

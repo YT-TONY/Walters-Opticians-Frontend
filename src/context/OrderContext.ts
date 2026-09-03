@@ -1,5 +1,27 @@
+// src/context/OrderContext.ts
 import { createContext } from 'react';
 import type { PrescriptionStatus } from '../types/admin';
+
+export interface AdminOrderItem {
+  id?: string | number;
+  productId?: number;
+  productName?: string;
+  productBrand?: string;
+  productImageUrl?: string;
+  quantity: number;
+  orderType: string;
+  framePrice?: number;
+  lensFee?: number;
+  prescriptionStatus?: PrescriptionStatus | string;
+  prescriptionFileUrl?: string;
+  rightSph?: number;
+  rightCyl?: number;
+  rightAxis?: number;
+  leftSph?: number;
+  leftCyl?: number;
+  leftAxis?: number;
+  pdMm?: number;
+}
 
 export interface AdminOrder {
   id: string;
@@ -23,12 +45,16 @@ export interface AdminOrder {
   carrier?: string;
   shippingLabelUrl?: string;
 
-  // Product metadata
+  // Batch Order Items Array
+  items?: AdminOrderItem[];
+
+  // Fallback single-product metadata
+  productId?: number;
   productName?: string;
   productBrand?: string;
   productImageUrl?: string;
 
-  // Prescription Parameters
+  // Fallback single-product Prescription Parameters
   prescriptionFileUrl?: string;
   rightSph?: number;
   rightCyl?: number;

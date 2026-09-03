@@ -28,12 +28,32 @@ import {
   Download
 } from 'lucide-react';
 
+export interface BackendOrderItem {
+  id?: number;
+  product_id?: number;
+  product_name?: string | null;
+  product_brand?: string | null;
+  product_image_url?: string | null;
+  quantity: number;
+  order_type: string;
+  frame_price?: number;
+  lens_fee?: number;
+
+  // Prescription Parameters
+  prescription_status?: string | null;
+  prescription_file_url?: string | null;
+  right_sph?: number | null;
+  right_cyl?: number | null;
+  right_axis?: number | null;
+  left_sph?: number | null;
+  left_cyl?: number | null;
+  left_axis?: number | null;
+  pd_mm?: number | null;
+}
+
 interface BackendOrder {
   id: number;
   reference_id: string;
-  product_id: number;
-  quantity: number;
-  order_type: string;
   country: string;
   shipping_address: string;
   frame_price: number;
@@ -42,17 +62,23 @@ interface BackendOrder {
   shipping_fee: number;
   total_amount: number;
   status: string;
-  prescription_status?: string | null;
   carrier?: string | null;
   tracking_number?: string | null;
   shipping_label_url?: string | null;
   appointment_date?: string | null;
   created_at: string;
+
+  // Multi-item order support
+  items?: BackendOrderItem[];
+
+  // Legacy single item fallbacks
+  product_id?: number;
+  quantity?: number;
+  order_type?: string;
   product_name?: string | null;
   product_brand?: string | null;
   product_image_url?: string | null;
-
-  // Prescription Parameters
+  prescription_status?: string | null;
   prescription_file_url?: string | null;
   right_sph?: number | null;
   right_cyl?: number | null;
@@ -170,6 +196,34 @@ export const Profile: React.FC = () => {
     return `${minDate.toLocaleDateString('en-GB', formatOpts)} - ${maxDate.toLocaleDateString('en-GB', formatOpts)}`;
   };
 
+  // Helper to resolve items array
+  const getOrderItems = (order: BackendOrder): BackendOrderItem[] => {
+    if (order.items && order.items.length > 0) {
+      return order.items;
+    }
+    return [
+      {
+        product_id: order.product_id,
+        product_name: order.product_name,
+        product_brand: order.product_brand,
+        product_image_url: order.product_image_url,
+        quantity: order.quantity || 1,
+        order_type: order.order_type || 'frame_only',
+        frame_price: order.frame_price,
+        lens_fee: order.lens_fee,
+        prescription_status: order.prescription_status,
+        prescription_file_url: order.prescription_file_url,
+        right_sph: order.right_sph,
+        right_cyl: order.right_cyl,
+        right_axis: order.right_axis,
+        left_sph: order.left_sph,
+        left_cyl: order.left_cyl,
+        left_axis: order.left_axis,
+        pd_mm: order.pd_mm,
+      },
+    ];
+  };
+
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
@@ -193,16 +247,16 @@ export const Profile: React.FC = () => {
   return (
     <div className="min-h-screen bg-walters-cream py-8 px-4 sm:px-6 lg:px-8 font-sans text-walters-charcoal antialiased">
       <div className="max-w-6xl mx-auto space-y-6">
-        
         {/* Top Banner */}
         <div className="border-b border-walters-border/60 pb-4">
           <h1 className="font-sans text-2xl md:text-3xl font-bold tracking-tight text-walters-navy">My Account</h1>
-          <p className="text-xs text-walters-slate mt-1 font-medium">Manage your personal details, optical orders, and security preferences.</p>
+          <p className="text-xs text-walters-slate mt-1 font-medium">
+            Manage your personal details, optical orders, and security preferences.
+          </p>
         </div>
 
         {/* Sidebar + Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-          
           {/* Left Sidebar */}
           <div className="bg-white rounded-3xl border border-walters-border p-5 shadow-2xs space-y-6">
             <div className="flex items-center space-x-3 pb-4 border-b border-walters-border">
@@ -210,8 +264,12 @@ export const Profile: React.FC = () => {
                 {user?.full_name ? user.full_name[0].toUpperCase() : <User className="w-6 h-6" />}
               </div>
               <div className="overflow-hidden">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-walters-slate block">Welcome back</span>
-                <h2 className="font-sans font-bold text-base text-walters-navy truncate">{user?.full_name || 'Valued Customer'}</h2>
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-walters-slate block">
+                  Welcome back
+                </span>
+                <h2 className="font-sans font-bold text-base text-walters-navy truncate">
+                  {user?.full_name || 'Valued Customer'}
+                </h2>
               </div>
             </div>
 
@@ -273,12 +331,13 @@ export const Profile: React.FC = () => {
 
           {/* Right Content Column */}
           <div className="lg:col-span-3 space-y-6">
-            
             {/* TAB 1: PURCHASES & ORDER HISTORY */}
             {activeTab === 'orders' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">Purchases and Order History</h3>
+                  <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">
+                    Purchases and Order History
+                  </h3>
                   <span className="text-xs font-semibold text-walters-slate">{orders.length} order(s)</span>
                 </div>
 
@@ -331,6 +390,7 @@ export const Profile: React.FC = () => {
                       const isExpanded = expandedOrderId === order.id;
                       const activeStep = getStepIndex(order.status);
                       const estimatedDelivery = calculateEstimatedDelivery(order.created_at, order.country);
+                      const orderItems = getOrderItems(order);
 
                       return (
                         <div
@@ -350,11 +410,13 @@ export const Profile: React.FC = () => {
                                 {getStatusBadge(order.status)}
                               </div>
                               <p className="text-xs text-walters-slate">
-                                Placed on {new Date(order.created_at).toLocaleDateString('en-GB', {
+                                Placed on{' '}
+                                {new Date(order.created_at).toLocaleDateString('en-GB', {
                                   day: 'numeric',
                                   month: 'short',
                                   year: 'numeric',
-                                })}
+                                })}{' '}
+                                • <span className="font-semibold">{orderItems.length} item(s)</span>
                               </p>
                             </div>
 
@@ -377,8 +439,7 @@ export const Profile: React.FC = () => {
                           {/* Expanded Stepper & Rich Item Details */}
                           {isExpanded && (
                             <div className="border-t border-walters-border bg-walters-cream p-6 space-y-6">
-                              
-                              {/* Live Stepper with Green Checkmarks */}
+                              {/* Live Stepper */}
                               <div className="bg-white p-5 rounded-2xl border border-walters-border space-y-4">
                                 <div className="flex items-center justify-between">
                                   <span className="text-[11px] font-bold text-walters-slate uppercase tracking-wider block">
@@ -393,30 +454,46 @@ export const Profile: React.FC = () => {
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[11px] font-semibold">
-                                  <div className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
-                                    activeStep >= 1 ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-walters-cream text-walters-slate border-walters-border'
-                                  }`}>
+                                  <div
+                                    className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                                      activeStep >= 1
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                                        : 'bg-walters-cream text-walters-slate border-walters-border'
+                                    }`}
+                                  >
                                     <span>1. Verification</span>
                                     {activeStep >= 1 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                                   </div>
 
-                                  <div className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
-                                    activeStep >= 2 ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-walters-cream text-walters-slate border-walters-border'
-                                  }`}>
+                                  <div
+                                    className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                                      activeStep >= 2
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                                        : 'bg-walters-cream text-walters-slate border-walters-border'
+                                    }`}
+                                  >
                                     <span>2. Glazing & QC</span>
                                     {activeStep >= 2 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                                   </div>
 
-                                  <div className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
-                                    activeStep >= 3 ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-walters-cream text-walters-slate border-walters-border'
-                                  }`}>
+                                  <div
+                                    className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                                      activeStep >= 3
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                                        : 'bg-walters-cream text-walters-slate border-walters-border'
+                                    }`}
+                                  >
                                     <span>3. Dispatched</span>
                                     {activeStep >= 3 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                                   </div>
 
-                                  <div className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
-                                    activeStep >= 4 ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-walters-cream text-walters-slate border-walters-border'
-                                  }`}>
+                                  <div
+                                    className={`p-2.5 rounded-xl border transition-all flex flex-col items-center justify-center space-y-1 ${
+                                      activeStep >= 4
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                                        : 'bg-walters-cream text-walters-slate border-walters-border'
+                                    }`}
+                                  >
                                     <span>4. Delivered</span>
                                     {activeStep >= 4 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                                   </div>
@@ -425,7 +502,11 @@ export const Profile: React.FC = () => {
                                 {order.tracking_number ? (
                                   <div className="mt-3 text-[11px] text-walters-slate flex flex-col sm:flex-row items-start sm:items-center justify-between pt-3 border-t border-walters-border gap-2">
                                     <span>
-                                      Carrier: <strong className="text-walters-navy font-semibold">{order.carrier || 'Royal Mail'}</strong> | Tracking Ref:{' '}
+                                      Carrier:{' '}
+                                      <strong className="text-walters-navy font-semibold">
+                                        {order.carrier || 'Royal Mail'}
+                                      </strong>{' '}
+                                      | Tracking Ref:{' '}
                                       <strong className="font-mono text-walters-navy">{order.tracking_number}</strong>
                                     </span>
                                     {order.shipping_label_url && (
@@ -448,134 +529,166 @@ export const Profile: React.FC = () => {
                                 )}
                               </div>
 
-                              {/* Detailed Item Summary Card */}
-                              <div className="space-y-3">
+                              {/* Multi-Item Breakdown Loop */}
+                              <div className="space-y-4">
                                 <span className="text-[11px] font-bold text-walters-slate uppercase tracking-wider block">
-                                  Exact Item Purchased & Specs
+                                  Items Purchased ({orderItems.length}) & Optical Specs
                                 </span>
 
-                                <div className="bg-white p-5 rounded-2xl border border-walters-border space-y-4">
-                                  {/* Item Header */}
-                                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                    <div className="flex items-center space-x-4">
-                                      <div className="w-16 h-16 bg-walters-cream border border-walters-border rounded-xl flex items-center justify-center font-sans font-bold text-base text-walters-navy shrink-0 overflow-hidden p-1.5">
-                                        {order.product_image_url ? (
-                                          <img src={order.product_image_url} alt={order.product_name || 'Eyewear'} className="object-contain max-h-full max-w-full" />
-                                        ) : (
-                                          'W'
+                                {orderItems.map((item, idx) => (
+                                  <div
+                                    key={item.id || idx}
+                                    className="bg-white p-5 rounded-2xl border border-walters-border space-y-4"
+                                  >
+                                    {/* Item Header */}
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                      <div className="flex items-center space-x-4">
+                                        <div className="w-16 h-16 bg-walters-cream border border-walters-border rounded-xl flex items-center justify-center font-sans font-bold text-base text-walters-navy shrink-0 overflow-hidden p-1.5">
+                                          {item.product_image_url ? (
+                                            <img
+                                              src={item.product_image_url}
+                                              alt={item.product_name || 'Eyewear'}
+                                              className="object-contain max-h-full max-w-full"
+                                            />
+                                          ) : (
+                                            'W'
+                                          )}
+                                        </div>
+                                        <div>
+                                          <span className="text-[10px] font-bold text-walters-slate uppercase tracking-wider block">
+                                            {item.product_brand || 'Walters Opticians'}
+                                          </span>
+                                          <h4 className="font-sans font-bold text-base text-walters-navy tracking-tight">
+                                            {item.product_name || `Optical Frame #${item.product_id}`}{' '}
+                                            <span className="text-xs font-medium text-walters-slate">
+                                              × {item.quantity}
+                                            </span>
+                                          </h4>
+                                          <p className="text-[11px] text-walters-slate font-medium mt-0.5">
+                                            {item.order_type === 'frame_only'
+                                              ? 'Frames Only (Demo Lenses)'
+                                              : 'Custom Prescription Lenses Included'}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="text-right w-full sm:w-auto flex sm:flex-col items-center sm:items-end justify-between">
+                                        <span className="font-sans font-bold text-base text-walters-navy tabular-nums">
+                                          £{((item.frame_price || 0) * item.quantity).toFixed(2)}
+                                        </span>
+
+                                        {item.prescription_status && (
+                                          <div className="mt-1 flex items-center text-[10px] text-walters-navy font-semibold bg-walters-cream px-2 py-1 rounded-lg border border-walters-border">
+                                            <FileText className="w-3 h-3 mr-1 text-walters-gold" />
+                                            <span>
+                                              Rx Status:{' '}
+                                              {item.prescription_status.replace(/_/g, ' ').toUpperCase()}
+                                            </span>
+                                          </div>
                                         )}
                                       </div>
-                                      <div>
-                                        <span className="text-[10px] font-bold text-walters-slate uppercase tracking-wider block">
-                                          {order.product_brand || 'Walters Opticians'}
-                                        </span>
-                                        <h4 className="font-sans font-bold text-base text-walters-navy tracking-tight">
-                                          {order.product_name || `Optical Frame #${order.product_id}`} <span className="text-xs font-medium text-walters-slate">× {order.quantity}</span>
-                                        </h4>
-                                        <p className="text-[11px] text-walters-slate font-medium mt-0.5">
-                                          {order.order_type === 'frame_only' ? 'Frames Only (Demo Lenses)' : 'Custom Prescription Lenses Included'}
-                                        </p>
-                                      </div>
                                     </div>
 
-                                    <div className="text-right w-full sm:w-auto flex sm:flex-col items-center sm:items-end justify-between">
-                                      <span className="font-sans font-bold text-base text-walters-navy tabular-nums">
-                                        £{order.frame_price.toFixed(2)}
-                                      </span>
-
-                                      {order.prescription_status && (
-                                        <div className="mt-1 flex items-center text-[10px] text-walters-navy font-semibold bg-walters-cream px-2 py-1 rounded-lg border border-walters-border">
-                                          <FileText className="w-3 h-3 mr-1 text-walters-gold" />
-                                          <span>Rx Status: {order.prescription_status.replace(/_/g, ' ').toUpperCase()}</span>
+                                    {/* Prescription Document / Table Matrix */}
+                                    {item.prescription_file_url ? (
+                                      <div className="p-3 bg-walters-offwhite rounded-xl border border-walters-border flex items-center justify-between text-xs">
+                                        <div className="flex items-center space-x-2">
+                                          <FileText className="w-4 h-4 text-walters-navy" />
+                                          <span className="font-semibold text-walters-navy">
+                                            Attached Prescription Document
+                                          </span>
                                         </div>
-                                      )}
-                                    </div>
+                                        <a
+                                          href={item.prescription_file_url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="px-3 py-1 bg-walters-navy text-white text-[10px] font-semibold rounded hover:bg-walters-gold hover:text-walters-navy transition-all flex items-center space-x-1"
+                                        >
+                                          <Download className="w-3 h-3" />
+                                          <span>View Document</span>
+                                        </a>
+                                      </div>
+                                    ) : item.right_sph !== undefined || item.left_sph !== undefined ? (
+                                      <div className="space-y-1.5 pt-1">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-walters-slate block">
+                                          Prescription Parameters Matrix
+                                        </span>
+                                        <table className="w-full text-center text-xs border border-walters-border rounded-lg overflow-hidden">
+                                          <thead className="bg-walters-cream font-semibold text-walters-navy border-b border-walters-border text-[10px] uppercase">
+                                            <tr>
+                                              <th className="py-1.5 px-3 text-left">Eye</th>
+                                              <th className="py-1.5 px-3">Sphere (SPH)</th>
+                                              <th className="py-1.5 px-3">Cylinder (CYL)</th>
+                                              <th className="py-1.5 px-3">Axis</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-walters-border font-mono text-[11px] text-walters-navy">
+                                            <tr>
+                                              <td className="py-1.5 px-3 text-left font-sans font-bold bg-walters-cream/30">
+                                                OD (Right)
+                                              </td>
+                                              <td className="py-1.5 px-3">{item.right_sph ?? '0.00'}</td>
+                                              <td className="py-1.5 px-3">{item.right_cyl ?? '0.00'}</td>
+                                              <td className="py-1.5 px-3">{item.right_axis ?? '0'}°</td>
+                                            </tr>
+                                            <tr>
+                                              <td className="py-1.5 px-3 text-left font-sans font-bold bg-walters-cream/30">
+                                                OS (Left)
+                                              </td>
+                                              <td className="py-1.5 px-3">{item.left_sph ?? '0.00'}</td>
+                                              <td className="py-1.5 px-3">{item.left_cyl ?? '0.00'}</td>
+                                              <td className="py-1.5 px-3">{item.left_axis ?? '0'}°</td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ) : null}
                                   </div>
+                                ))}
+                              </div>
 
-                                  {/* Itemized Price Breakdown Table */}
-                                  <div className="p-3 bg-walters-cream rounded-xl border border-walters-border space-y-1.5 text-xs">
-                                    <div className="flex justify-between text-walters-slate">
-                                      <span>Frame Price</span>
-                                      <span className="font-semibold text-walters-navy tabular-nums">£{order.frame_price.toFixed(2)}</span>
-                                    </div>
-                                    {order.lens_fee > 0 && (
-                                      <div className="flex justify-between text-walters-slate">
-                                        <span>Prescription Lens Glazing Fee</span>
-                                        <span className="font-semibold text-walters-navy tabular-nums">£{order.lens_fee.toFixed(2)}</span>
-                                      </div>
-                                    )}
-                                    {order.shipping_fee > 0 && (
-                                      <div className="flex justify-between text-walters-slate">
-                                        <span>Shipping & Handling</span>
-                                        <span className="font-semibold text-walters-navy tabular-nums">£{order.shipping_fee.toFixed(2)}</span>
-                                      </div>
-                                    )}
-                                    <div className="pt-1.5 border-t border-walters-border/80 flex justify-between font-bold text-walters-navy">
-                                      <span>Total Amount Paid</span>
-                                      <span className="tabular-nums">£{order.total_amount.toFixed(2)}</span>
-                                    </div>
-                                  </div>
-
-                                  {/* Prescription Parameters Table / Document */}
-                                  {order.prescription_file_url ? (
-                                    <div className="p-3 bg-walters-offwhite rounded-xl border border-walters-border flex items-center justify-between text-xs">
-                                      <div className="flex items-center space-x-2">
-                                        <FileText className="w-4 h-4 text-walters-navy" />
-                                        <span className="font-semibold text-walters-navy">Attached Prescription Document</span>
-                                      </div>
-                                      <a
-                                        href={order.prescription_file_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="px-3 py-1 bg-walters-navy text-white text-[10px] font-semibold rounded hover:bg-walters-gold hover:text-walters-navy transition-all flex items-center space-x-1"
-                                      >
-                                        <Download className="w-3 h-3" />
-                                        <span>View Document</span>
-                                      </a>
-                                    </div>
-                                  ) : (order.right_sph !== undefined || order.left_sph !== undefined) ? (
-                                    <div className="space-y-1.5 pt-1">
-                                      <span className="text-[10px] font-bold uppercase tracking-wider text-walters-slate block">
-                                        Prescription Parameters Matrix
-                                      </span>
-                                      <table className="w-full text-center text-xs border border-walters-border rounded-lg overflow-hidden">
-                                        <thead className="bg-walters-cream font-semibold text-walters-navy border-b border-walters-border text-[10px] uppercase">
-                                          <tr>
-                                            <th className="py-1.5 px-3 text-left">Eye</th>
-                                            <th className="py-1.5 px-3">Sphere (SPH)</th>
-                                            <th className="py-1.5 px-3">Cylinder (CYL)</th>
-                                            <th className="py-1.5 px-3">Axis</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-walters-border font-mono text-[11px] text-walters-navy">
-                                          <tr>
-                                            <td className="py-1.5 px-3 text-left font-sans font-bold bg-walters-cream/30">OD (Right)</td>
-                                            <td className="py-1.5 px-3">{order.right_sph ?? '0.00'}</td>
-                                            <td className="py-1.5 px-3">{order.right_cyl ?? '0.00'}</td>
-                                            <td className="py-1.5 px-3">{order.right_axis ?? '0'}°</td>
-                                          </tr>
-                                          <tr>
-                                            <td className="py-1.5 px-3 text-left font-sans font-bold bg-walters-cream/30">OS (Left)</td>
-                                            <td className="py-1.5 px-3">{order.left_sph ?? '0.00'}</td>
-                                            <td className="py-1.5 px-3">{order.left_cyl ?? '0.00'}</td>
-                                            <td className="py-1.5 px-3">{order.left_axis ?? '0'}°</td>
-                                          </tr>
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  ) : null}
-
-                                  {/* Destination Address */}
-                                  <div className="flex items-start space-x-2 text-xs text-walters-slate pt-2 border-t border-walters-border">
-                                    <MapPin className="w-3.5 h-3.5 text-walters-navy shrink-0 mt-0.5" />
-                                    <span>
-                                      Shipping Address: <strong className="text-walters-navy font-semibold">{order.shipping_address}</strong> ({order.country})
+                              {/* Order-Level Itemized Price Breakdown Table */}
+                              <div className="p-4 bg-white rounded-2xl border border-walters-border space-y-2 text-xs">
+                                <span className="text-[10px] font-bold text-walters-slate uppercase tracking-wider block">
+                                  Order Financial Breakdown
+                                </span>
+                                <div className="flex justify-between text-walters-slate">
+                                  <span>Frame Subtotal</span>
+                                  <span className="font-semibold text-walters-navy tabular-nums">
+                                    £{order.frame_price.toFixed(2)}
+                                  </span>
+                                </div>
+                                {order.lens_fee > 0 && (
+                                  <div className="flex justify-between text-walters-slate">
+                                    <span>Prescription Lens Glazing Fee</span>
+                                    <span className="font-semibold text-walters-navy tabular-nums">
+                                      £{order.lens_fee.toFixed(2)}
                                     </span>
                                   </div>
-
+                                )}
+                                {order.shipping_fee > 0 && (
+                                  <div className="flex justify-between text-walters-slate">
+                                    <span>Shipping & Handling</span>
+                                    <span className="font-semibold text-walters-navy tabular-nums">
+                                      £{order.shipping_fee.toFixed(2)}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="pt-2 border-t border-walters-border/80 flex justify-between font-bold text-walters-navy text-sm">
+                                  <span>Total Amount Paid</span>
+                                  <span className="tabular-nums">£{order.total_amount.toFixed(2)}</span>
                                 </div>
                               </div>
 
+                              {/* Destination Address */}
+                              <div className="flex items-start space-x-2 text-xs text-walters-slate pt-2 border-t border-walters-border">
+                                <MapPin className="w-3.5 h-3.5 text-walters-navy shrink-0 mt-0.5" />
+                                <span>
+                                  Shipping Address:{' '}
+                                  <strong className="text-walters-navy font-semibold">{order.shipping_address}</strong>{' '}
+                                  ({order.country})
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -589,7 +702,9 @@ export const Profile: React.FC = () => {
             {/* TAB 2: ACCOUNT & SECURITY */}
             {activeTab === 'security' && (
               <div className="space-y-6">
-                <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">Account & Security Settings</h3>
+                <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">
+                  Account & Security Settings
+                </h3>
 
                 <div className="bg-white p-6 rounded-3xl border border-walters-border shadow-2xs space-y-4">
                   <h4 className="font-sans font-bold text-base text-walters-navy flex items-center space-x-2">
@@ -651,7 +766,9 @@ export const Profile: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-walters-navy mb-1">Confirm New Password</label>
+                      <label className="block text-xs font-semibold text-walters-navy mb-1">
+                        Confirm New Password
+                      </label>
                       <input
                         type="password"
                         required
@@ -675,7 +792,9 @@ export const Profile: React.FC = () => {
             {/* TAB 3: HELP & SUPPORT */}
             {activeTab === 'support' && (
               <div className="space-y-6">
-                <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">Help & Optician Support</h3>
+                <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">
+                  Help & Optician Support
+                </h3>
 
                 <div className="bg-white p-6 rounded-3xl border border-walters-border shadow-2xs space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -685,7 +804,9 @@ export const Profile: React.FC = () => {
                     >
                       <Phone className="w-6 h-6 text-walters-navy shrink-0" />
                       <div>
-                        <span className="text-[10px] uppercase font-semibold text-walters-slate block">Optician Helpline</span>
+                        <span className="text-[10px] uppercase font-semibold text-walters-slate block">
+                          Optician Helpline
+                        </span>
                         <strong className="text-sm font-sans font-bold text-walters-navy">+44 (0)1427 616506</strong>
                       </div>
                     </a>
@@ -696,8 +817,12 @@ export const Profile: React.FC = () => {
                     >
                       <Mail className="w-6 h-6 text-walters-navy shrink-0" />
                       <div>
-                        <span className="text-[10px] uppercase font-semibold text-walters-slate block">Email Support</span>
-                        <strong className="text-sm font-sans font-bold text-walters-navy">support@waltersopticians.com</strong>
+                        <span className="text-[10px] uppercase font-semibold text-walters-slate block">
+                          Email Support
+                        </span>
+                        <strong className="text-sm font-sans font-bold text-walters-navy">
+                          support@waltersopticians.com
+                        </strong>
                       </div>
                     </a>
                   </div>
@@ -706,34 +831,36 @@ export const Profile: React.FC = () => {
                     <h4 className="font-sans font-bold text-base text-walters-navy">Frequently Asked Questions</h4>
 
                     <div className="p-4 bg-walters-cream rounded-2xl border border-walters-border space-y-1">
-                      <h5 className="font-semibold text-xs text-walters-navy">How do I upload my optical prescription?</h5>
+                      <h5 className="font-semibold text-xs text-walters-navy">
+                        How do I upload my optical prescription?
+                      </h5>
                       <p className="text-xs text-walters-slate">
-                        During checkout, select 'Upload Prescription' to attach a scan or photo, or choose 'Manual Prescription' to type in your SPH, CYL, and Axis parameters.
+                        During checkout, select 'Upload Prescription' to attach a scan or photo, or choose 'Manual
+                        Prescription' to type in your SPH, CYL, and Axis parameters.
                       </p>
                     </div>
 
                     <div className="p-4 bg-walters-cream rounded-2xl border border-walters-border space-y-1">
                       <h5 className="font-semibold text-xs text-walters-navy">How long does lens glazing take?</h5>
                       <p className="text-xs text-walters-slate">
-                        Custom prescription lens glazing and quality assurance checks typically take 2 to 4 working days before dispatch.
+                        Custom prescription lens glazing and quality assurance checks typically take 2 to 4 working days
+                        before dispatch.
                       </p>
                     </div>
 
                     <div className="p-4 bg-walters-cream rounded-2xl border border-walters-border space-y-1">
                       <h5 className="font-semibold text-xs text-walters-navy">Can I track my parcel live?</h5>
                       <p className="text-xs text-walters-slate">
-                        Yes, as soon as your order status updates to 'Dispatched', your Royal Mail tracking reference and shipping label will appear in your Purchases tab.
+                        Yes, as soon as your order status updates to 'Dispatched', your Royal Mail tracking reference and
+                        shipping label will appear in your Purchases tab.
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
           </div>
-
         </div>
-
       </div>
     </div>
   );

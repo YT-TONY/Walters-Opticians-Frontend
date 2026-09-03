@@ -1,13 +1,25 @@
+// src/context/OrderProvider.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { OrderContext, type AdminOrder } from './OrderContext';
-import { ordersApi, type BackendOrderResponse } from '../api/orders';
+import { OrderContext, type AdminOrder, type AdminOrderItem } from './OrderContext';
+import { ordersApi, type BackendOrderResponse, type BackendOrderItem } from '../api/orders';
+
+// Extended type helper to safely handle item properties across API schemas
+type OrderOrItem = Partial<Omit<BackendOrderItem, 'order_type'>> & {
+  id?: number | string;
+  order_type?: string;
+  prescription_status?: string | null;
+};
 
 const mapBackendToAdminOrder = (order: BackendOrderResponse): AdminOrder => {
-  let rxStatus: string = order.prescription_status || 'n_a';
-  if (!order.prescription_status) {
-    if (order.order_type === 'upload_prescription') {
+  const hasItems = Array.isArray(order.items) && order.items.length > 0;
+  const firstItem: OrderOrItem = hasItems ? (order.items![0] as OrderOrItem) : order;
+
+  let rxStatus: string = order.prescription_status || firstItem.prescription_status || 'n_a';
+  if (!order.prescription_status && !firstItem.prescription_status) {
+    const orderType = firstItem.order_type || order.order_type;
+    if (orderType === 'upload_prescription') {
       rxStatus = 'Uploaded';
-    } else if (order.order_type === 'manual_prescription') {
+    } else if (orderType === 'manual_prescription') {
       rxStatus = 'Verified';
     } else {
       rxStatus = 'Not Required';
@@ -17,42 +29,81 @@ const mapBackendToAdminOrder = (order: BackendOrderResponse): AdminOrder => {
   const shippingParts = order.shipping_address ? order.shipping_address.split(',') : [];
   const customerName = shippingParts[0]?.trim() || 'Customer';
 
+  // Calculate aggregate item count for batch orders
+  const totalItemsCount = hasItems
+    ? order.items!.reduce((sum, item) => sum + (item.quantity || 1), 0)
+    : order.quantity || 1;
+
+  // Map individual batch items array safely using extended type
+  const mappedItems: AdminOrderItem[] | undefined = hasItems
+    ? order.items!.map((rawItem) => {
+        const item = rawItem as OrderOrItem;
+        return {
+          id: item.id,
+          productId: item.product_id,
+          productName: item.product_name || `Optical Frame #${item.product_id}`,
+          productBrand: item.product_brand || 'Walters Opticians',
+          productImageUrl: item.product_image_url || undefined,
+          quantity: item.quantity || 1,
+          orderType: item.order_type || 'frame_only',
+          framePrice: item.frame_price ?? 0,
+          lensFee: item.lens_fee ?? 0,
+          prescriptionStatus: item.prescription_status || rxStatus,
+          prescriptionFileUrl: item.prescription_file_url || undefined,
+          rightSph: item.right_sph ?? undefined,
+          rightCyl: item.right_cyl ?? undefined,
+          rightAxis: item.right_axis ?? undefined,
+          leftSph: item.left_sph ?? undefined,
+          leftCyl: item.left_cyl ?? undefined,
+          leftAxis: item.left_axis ?? undefined,
+          pdMm: item.pd_mm ?? undefined,
+        };
+      })
+    : undefined;
+
+  // Clean title for main high-level table view
+  const primaryName = firstItem.product_name || `Optical Frame #${firstItem.product_id || order.product_id}`;
+
   return {
     id: order.reference_id || `ORD-${order.id}`,
     rawId: order.id,
     referenceId: order.reference_id,
     customerName,
     email: 'Verified Customer',
-    date: new Date(order.created_at).toISOString().split('T')[0],
-    itemsCount: order.quantity || 1,
+    date: order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    itemsCount: totalItemsCount,
     totalGbp: order.total_amount,
-    framePrice: order.frame_price,
-    lensFee: order.lens_fee,
-    examFee: order.exam_fee,
-    shippingFee: order.shipping_fee,
+    framePrice: firstItem.frame_price ?? order.frame_price ?? order.total_amount,
+    lensFee: firstItem.lens_fee ?? order.lens_fee ?? 0,
+    examFee: order.exam_fee ?? 0,
+    shippingFee: order.shipping_fee ?? 0,
     prescriptionStatus: rxStatus,
     orderStatus: order.status || 'Order Placed',
-    orderType: order.order_type,
+    orderType: firstItem.order_type || order.order_type || 'frame_only',
     shippingAddress: order.shipping_address,
     country: order.country,
     trackingNumber: order.tracking_number || undefined,
     carrier: order.carrier || undefined,
     shippingLabelUrl: order.shipping_label_url || undefined,
 
-    // Product details mapping
-    productName: order.product_name || `Optical Frame #${order.product_id}`,
-    productBrand: order.product_brand || 'Walters Opticians',
-    productImageUrl: order.product_image_url || undefined,
+    // Full Batch Items List
+    items: mappedItems,
 
-    // Prescription parameters mapping
-    prescriptionFileUrl: order.prescription_file_url || undefined,
-    rightSph: order.right_sph ?? undefined,
-    rightCyl: order.right_cyl ?? undefined,
-    rightAxis: order.right_axis ?? undefined,
-    leftSph: order.left_sph ?? undefined,
-    leftCyl: order.left_cyl ?? undefined,
-    leftAxis: order.left_axis ?? undefined,
-    pdMm: order.pd_mm ?? undefined,
+    // Single product fallback metadata
+    productId: firstItem.product_id || order.product_id,
+    productName: primaryName,
+    productBrand: firstItem.product_brand || order.product_brand || 'Walters Opticians',
+    productImageUrl: firstItem.product_image_url || order.product_image_url || undefined,
+
+    // Single product fallback prescription parameters
+    prescriptionFileUrl: firstItem.prescription_file_url || order.prescription_file_url || undefined,
+    rightSph: firstItem.right_sph ?? order.right_sph ?? undefined,
+    rightCyl: firstItem.right_cyl ?? order.right_cyl ?? undefined,
+    rightAxis: firstItem.right_axis ?? order.right_axis ?? undefined,
+    leftSph: firstItem.left_sph ?? order.left_sph ?? undefined,
+    leftCyl: firstItem.left_cyl ?? order.left_cyl ?? undefined,
+    leftAxis: firstItem.left_axis ?? order.left_axis ?? undefined,
+    pdMm: firstItem.pd_mm ?? order.pd_mm ?? undefined,
   };
 };
 

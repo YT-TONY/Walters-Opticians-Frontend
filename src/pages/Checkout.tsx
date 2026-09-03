@@ -1,10 +1,11 @@
+// src/pages/Checkout.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import type { CartItem } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useCurrency } from '../hooks/useCurrency';
 import { ordersApi, type BackendOrderCreate } from '../api/orders';
-import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, MapPin, Building2, Phone, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CheckoutProps {
@@ -12,13 +13,74 @@ interface CheckoutProps {
   onClearCart: () => void;
 }
 
+interface ValidationErrorItem {
+  loc?: (string | number)[];
+  msg?: string;
+  type?: string;
+}
+
 interface ApiErrorResponse {
   response?: {
     data?: {
-      detail?: string;
+      detail?: string | ValidationErrorItem[];
     };
   };
   message?: string;
+}
+
+// Strict API interfaces
+interface RestCountryRaw {
+  name?: {
+    common?: string;
+  };
+  cca2?: string;
+  idd?: {
+    root?: string;
+    suffixes?: string[];
+  };
+}
+
+interface CountryOption {
+  name: string;
+  code: string;
+  dialCode: string;
+}
+
+interface StateOption {
+  name: string;
+  state_code?: string;
+}
+
+interface CountriesNowStatesResponse {
+  error: boolean;
+  msg: string;
+  data?: {
+    name: string;
+    iso2: string;
+    states: StateOption[];
+  };
+}
+
+interface CountriesNowCitiesResponse {
+  error: boolean;
+  msg: string;
+  data?: string[];
+}
+
+interface CountriesNowIsoResponse {
+  error: boolean;
+  msg: string;
+  data?: Array<{
+    name: string;
+    Iso2: string;
+  }>;
+}
+
+interface IpApiResponse {
+  country_name?: string;
+  country_code?: string;
+  city?: string;
+  region?: string;
 }
 
 export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) => {
@@ -26,13 +88,35 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
 
+  // Contact Info
   const [email, setEmail] = useState(user?.email || '');
+  const [phoneDialCode, setPhoneDialCode] = useState('+44');
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState(user?.full_name || '');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
+
+  // Address Details
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('UK');
+
+  // Location Selector States
+  const [countries, setCountries] = useState<CountryOption[]>([]);
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
+
+  const [states, setStates] = useState<StateOption[]>([]);
+  const [selectedState, setSelectedState] = useState('');
+  const [useManualState, setUseManualState] = useState(false);
+
+  const [cities, setCities] = useState<string[]>([]);
+  const [selectedCity, setSelectedCity] = useState('');
+  const [useManualCity, setUseManualCity] = useState(false);
+
+  // Loading States
+  const [loadingCountries, setLoadingCountries] = useState(true);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+
+  // Payment Details
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
@@ -40,16 +124,203 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // 1. Fetch dynamic country list with resilient multi-tier fallback (Primary API -> Secondary API -> Offline Presets)
   useEffect(() => {
-    fetch('https://ipapi.co/json/')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.country_name) {
-          setCountry(data.country_name);
+    let isMounted = true;
+
+    const handleIpDetection = async (availableCountries: CountryOption[]) => {
+      try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        const ipData: IpApiResponse = await ipRes.json();
+
+        if (ipData && ipData.country_name) {
+          const matched = availableCountries.find(
+            (c) =>
+              c.name.toLowerCase() === ipData.country_name?.toLowerCase() ||
+              c.code.toLowerCase() === ipData.country_code?.toLowerCase()
+          );
+          if (matched && isMounted) {
+            setSelectedCountry(matched);
+            setPhoneDialCode(matched.dialCode);
+            if (ipData.region) setSelectedState(ipData.region);
+            if (ipData.city) setSelectedCity(ipData.city);
+            return;
+          }
         }
-      })
-      .catch(() => setCountry('United Kingdom'));
+      } catch (ipErr: unknown) {
+        console.warn('IP auto-detection skipped:', ipErr);
+      }
+
+      if (isMounted) {
+        const defaultGb = availableCountries.find((c) => c.code === 'GB') || availableCountries[0];
+        if (defaultGb) {
+          setSelectedCountry(defaultGb);
+          setPhoneDialCode(defaultGb.dialCode);
+        }
+      }
+    };
+
+    const fetchCountries = async () => {
+      // Tier 1: Primary REST Countries API
+      try {
+        const res = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2,idd');
+        if (res.ok) {
+          const data: RestCountryRaw[] = await res.json();
+          const parsedCountries: CountryOption[] = data
+            .map((c) => {
+              const root = c.idd?.root || '';
+              const suffix = c.idd?.suffixes && c.idd.suffixes.length === 1 ? c.idd.suffixes[0] : '';
+              const dialCode = root ? `${root}${suffix}` : '+1';
+              return {
+                name: c.name?.common || '',
+                code: c.cca2 || '',
+                dialCode,
+              };
+            })
+            .filter((c) => c.name && c.code)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+          if (isMounted && parsedCountries.length > 0) {
+            setCountries(parsedCountries);
+            await handleIpDetection(parsedCountries);
+            return;
+          }
+        }
+      } catch (primaryErr: unknown) {
+        console.warn('Primary country API blocked/failed, trying backup source...', primaryErr);
+      }
+
+      // Tier 2: Secondary CountriesNow ISO API
+      try {
+        const backupRes = await fetch('https://countriesnow.space/api/v0.1/countries/iso');
+        if (backupRes.ok) {
+          const backupData: CountriesNowIsoResponse = await backupRes.json();
+          if (!backupData.error && backupData.data) {
+            const fallbackCountries: CountryOption[] = backupData.data
+              .map((c) => ({
+                name: c.name,
+                code: c.Iso2,
+                dialCode: '+1',
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name));
+
+            if (isMounted && fallbackCountries.length > 0) {
+              setCountries(fallbackCountries);
+              await handleIpDetection(fallbackCountries);
+              return;
+            }
+          }
+        }
+      } catch (backupErr: unknown) {
+        console.warn('Backup country API blocked/failed:', backupErr);
+      }
+
+      // Tier 3: Built-in Offline Fallback List (Zero Network Dependency)
+      if (isMounted) {
+        const defaultList: CountryOption[] = [
+          { name: 'United Kingdom', code: 'GB', dialCode: '+44' },
+          { name: 'United States', code: 'US', dialCode: '+1' },
+          { name: 'Nigeria', code: 'NG', dialCode: '+234' },
+          { name: 'Canada', code: 'CA', dialCode: '+1' },
+          { name: 'Australia', code: 'AU', dialCode: '+61' },
+          { name: 'Germany', code: 'DE', dialCode: '+49' },
+          { name: 'France', code: 'FR', dialCode: '+33' },
+          { name: 'Ireland', code: 'IE', dialCode: '+353' },
+          { name: 'Netherlands', code: 'NL', dialCode: '+31' },
+          { name: 'Spain', code: 'ES', dialCode: '+34' },
+          { name: 'Italy', code: 'IT', dialCode: '+39' },
+          { name: 'South Africa', code: 'ZA', dialCode: '+27' },
+          { name: 'India', code: 'IN', dialCode: '+91' },
+          { name: 'Ghana', code: 'GH', dialCode: '+233' },
+          { name: 'Kenya', code: 'KE', dialCode: '+254' },
+        ];
+        setCountries(defaultList);
+        setSelectedCountry(defaultList[0]);
+        setPhoneDialCode(defaultList[0].dialCode);
+      }
+    };
+
+    fetchCountries().finally(() => {
+      if (isMounted) setLoadingCountries(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // 2. Fetch States/Regions when Selected Country changes
+  useEffect(() => {
+    if (!selectedCountry) return;
+
+    const fetchStates = async () => {
+      setLoadingStates(true);
+      setStates([]);
+      setCities([]);
+      setUseManualState(false);
+      setUseManualCity(false);
+
+      try {
+        const res = await fetch('https://countriesnow.space/api/v0.1/countries/states', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ country: selectedCountry.name }),
+        });
+        const result: CountriesNowStatesResponse = await res.json();
+
+        if (!result.error && result.data && result.data.states && result.data.states.length > 0) {
+          setStates(result.data.states);
+        } else {
+          setUseManualState(true);
+          setUseManualCity(true);
+        }
+      } catch (err: unknown) {
+        console.warn('Failed to fetch states, switching to manual input:', err);
+        setUseManualState(true);
+        setUseManualCity(true);
+      } finally {
+        setLoadingStates(false);
+      }
+    };
+
+    fetchStates();
+  }, [selectedCountry]);
+
+  // 3. Fetch Cities when Selected State changes
+  useEffect(() => {
+    if (!selectedCountry || !selectedState || useManualState) return;
+
+    const fetchCities = async () => {
+      setLoadingCities(true);
+      setCities([]);
+      setUseManualCity(false);
+
+      try {
+        const res = await fetch('https://countriesnow.space/api/v0.1/countries/state/cities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            country: selectedCountry.name,
+            state: selectedState,
+          }),
+        });
+        const result: CountriesNowCitiesResponse = await res.json();
+
+        if (!result.error && result.data && result.data.length > 0) {
+          setCities(result.data);
+        } else {
+          setUseManualCity(true);
+        }
+      } catch (err: unknown) {
+        console.warn('Failed to fetch cities, switching to manual input:', err);
+        setUseManualCity(true);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+
+    fetchCities();
+  }, [selectedCountry, selectedState, useManualState]);
 
   const getItemPriceGbp = (item: CartItem) =>
     item.purchaseType === 'prescription'
@@ -60,9 +331,19 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
   const estimatedTaxGbp = Math.round(subtotalGbp * 0.2);
   const totalGbp = subtotalGbp + estimatedTaxGbp;
 
+  const handleCountryChange = (countryCode: string) => {
+    const found = countries.find((c) => c.code === countryCode);
+    if (found) {
+      setSelectedCountry(found);
+      setPhoneDialCode(found.dialCode);
+      setSelectedState('');
+      setSelectedCity('');
+    }
+  };
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (/^[0-9+\s-]*$/.test(value)) {
+    if (/^[0-9\s-]*$/.test(value)) {
       setPhone(value);
     }
   };
@@ -90,9 +371,16 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
     e.preventDefault();
     setError('');
 
-    const cleanPhone = phone.replace(/[\s-]/g, '');
-    if (!/^\+?\d{7,15}$/.test(cleanPhone)) {
-      const msg = 'Please enter a valid numeric telephone number (7-15 digits).';
+    if (!selectedCountry) {
+      const msg = 'Please select a valid shipping country.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    const cleanPhoneDigits = phone.replace(/[\s-]/g, '');
+    if (!/^\d{6,14}$/.test(cleanPhoneDigits)) {
+      const msg = 'Please enter a valid telephone number (6-14 digits).';
       setError(msg);
       toast.error(msg);
       return;
@@ -121,23 +409,31 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
     }
 
     setLoading(true);
-    const formattedAddress = `${fullName}, ${address}, ${city}, ${postalCode}`;
+
+    const fullPhoneNumber = `${phoneDialCode} ${cleanPhoneDigits}`;
+    const addressComponents = [
+      fullName,
+      addressLine1,
+      addressLine2 ? `Landmark/Desc: ${addressLine2}` : '',
+      selectedCity,
+      selectedState,
+      postalCode,
+      `Tel: ${fullPhoneNumber}`,
+    ].filter(Boolean);
+
+    const formattedAddress = addressComponents.join(', ');
 
     try {
-      let firstReferenceId = '';
-
-      for (const item of cartItems) {
-        let orderType: BackendOrderCreate['order_type'] = 'frame_only';
+      const orderItems = cartItems.map((item) => {
+        let orderType: 'frame_only' | 'upload_prescription' | 'manual_prescription' | 'book_appointment' = 'frame_only';
         if (item.purchaseType === 'prescription') {
           orderType = item.prescription?.uploadedFileUrl ? 'upload_prescription' : 'manual_prescription';
         }
 
-        const payload: BackendOrderCreate = {
+        return {
           product_id: item.product.id,
           quantity: item.quantity,
           order_type: orderType,
-          shipping_address: formattedAddress,
-          country: country.trim().toUpperCase() || 'UK',
           prescription_file_url: item.prescription?.uploadedFileUrl || null,
           right_sph: item.prescription?.odSphere || null,
           right_cyl: item.prescription?.odCyl || null,
@@ -147,23 +443,39 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
           left_axis: item.prescription?.osAxis || null,
           pd_mm: item.prescription?.pd || null,
         };
+      });
 
-        const createdOrder = await ordersApi.create(payload);
-        if (!firstReferenceId) {
-          firstReferenceId = createdOrder.reference_id;
-        }
-      }
+      const payload: BackendOrderCreate = {
+        shipping_address: formattedAddress,
+        country: selectedCountry.code.toUpperCase(),
+        items: orderItems,
+      };
+
+      const createdOrder = await ordersApi.create(payload);
 
       onClearCart();
       toast.success('Order placed successfully!');
-      navigate(`/order-success/${firstReferenceId}`);
+      navigate(`/order-success/${createdOrder.reference_id}`);
     } catch (err: unknown) {
       console.error('Order Creation Error:', err);
-      
+
       const apiErr = err as ApiErrorResponse;
       const apiDetail = apiErr.response?.data?.detail;
-      const errMsg = apiDetail || (err instanceof Error ? err.message : 'Failed to process order. Please try again.');
-      
+      let errMsg = 'Failed to process order. Please try again.';
+
+      if (typeof apiDetail === 'string') {
+        errMsg = apiDetail;
+      } else if (Array.isArray(apiDetail)) {
+        errMsg = apiDetail
+          .map((item) => {
+            const field = item.loc ? item.loc[item.loc.length - 1] : 'Field';
+            return `${field}: ${item.msg || 'Invalid input'}`;
+          })
+          .join(' | ');
+      } else if (err instanceof Error) {
+        errMsg = err.message;
+      }
+
       setError(errMsg);
       toast.error(errMsg);
     } finally {
@@ -215,11 +527,16 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
 
         <form onSubmit={handleCompleteOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-7 space-y-8">
+            {/* Customer Information Section */}
             <section className="space-y-4">
-              <h2 className="font-serif text-xl font-bold text-walters-navy">Customer information</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <h2 className="font-serif text-xl font-bold text-walters-navy flex items-center space-x-2">
+                <Phone className="w-5 h-5 text-walters-gold" />
+                <span>Customer information</span>
+              </h2>
+
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Email</label>
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Email Address</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -229,25 +546,45 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
                     className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Phone Number (Digits only)</label>
-                  <input
-                    type="tel"
-                    placeholder="+447700900000"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    required
-                    className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
-                  />
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Phone Number</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={phoneDialCode}
+                      onChange={(e) => setPhoneDialCode(e.target.value)}
+                      className="px-3 py-3 bg-white border border-walters-border rounded-xl text-xs font-medium focus:outline-none focus:border-walters-navy cursor-pointer"
+                    >
+                      {countries.map((c) => (
+                        <option key={`${c.code}-${c.dialCode}`} value={c.dialCode}>
+                          {c.code} ({c.dialCode})
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      type="tel"
+                      placeholder="7700 900000"
+                      value={phone}
+                      onChange={handlePhoneChange}
+                      required
+                      className="flex-1 px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
+                    />
+                  </div>
                 </div>
               </div>
             </section>
 
+            {/* Shipping Address Section */}
             <section className="space-y-4">
-              <h2 className="font-serif text-xl font-bold text-walters-navy">Shipping address</h2>
+              <h2 className="font-serif text-xl font-bold text-walters-navy flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-walters-gold" />
+                <span>Shipping address</span>
+              </h2>
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Full name</label>
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Full Name</label>
                   <input
                     type="text"
                     placeholder="Ada Walters"
@@ -258,49 +595,144 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
                   />
                 </div>
 
+                {/* Country Dropdown */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Address</label>
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1 items-center justify-between">
+                    <span>Country / Region</span>
+                    <span className="text-[10px] text-walters-gold flex items-center gap-1">
+                      <Globe className="w-3 h-3" /> Auto-detected via IP
+                    </span>
+                  </label>
+                  {loadingCountries ? (
+                    <div className="px-4 py-3 bg-white border border-walters-border rounded-xl text-xs text-walters-slate">
+                      Loading countries...
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedCountry?.code || ''}
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        Select a Country
+                      </option>
+                      {countries.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Street Address */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Street Address</label>
                   <input
                     type="text"
                     placeholder="14 Rathbone Place"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
                     required
                     className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Address Description / Landmark */}
+                <div>
+                  <label className="text-[11px] font-semibold text-walters-slate mb-1 flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5 text-walters-slate" />
+                    <span>Address Description / Landmark (Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Apartment, suite, unit, or prominent nearby landmark"
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
+                  />
+                </div>
+
+                {/* State & City Cascading Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* State / Province */}
                   <div>
-                    <label className="block text-[11px] font-semibold text-walters-slate mb-1">City</label>
-                    <input
-                      type="text"
-                      placeholder="London"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
-                    />
+                    <label className="block text-[11px] font-semibold text-walters-slate mb-1">
+                      State / Region / Province
+                    </label>
+                    {loadingStates ? (
+                      <div className="px-4 py-3 bg-white border border-walters-border rounded-xl text-xs text-walters-slate">
+                        Loading states...
+                      </div>
+                    ) : !useManualState && states.length > 0 ? (
+                      <select
+                        value={selectedState}
+                        onChange={(e) => setSelectedState(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy cursor-pointer"
+                      >
+                        <option value="">Select State / Region</option>
+                        {states.map((s, idx) => (
+                          <option key={`${s.name}-${idx}`} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="State or Region"
+                        value={selectedState}
+                        onChange={(e) => setSelectedState(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
+                      />
+                    )}
                   </div>
+
+                  {/* City */}
                   <div>
-                    <label className="block text-[11px] font-semibold text-walters-slate mb-1">Postal code</label>
-                    <input
-                      type="text"
-                      placeholder="W1T 1HT"
-                      value={postalCode}
-                      onChange={(e) => setPostalCode(e.target.value)}
-                      required
-                      className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
-                    />
+                    <label className="block text-[11px] font-semibold text-walters-slate mb-1">City / Town</label>
+                    {loadingCities ? (
+                      <div className="px-4 py-3 bg-white border border-walters-border rounded-xl text-xs text-walters-slate">
+                        Loading cities...
+                      </div>
+                    ) : !useManualCity && cities.length > 0 ? (
+                      <select
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy cursor-pointer"
+                      >
+                        <option value="">Select City</option>
+                        {cities.map((cityItem, idx) => (
+                          <option key={`${cityItem}-${idx}`} value={cityItem}>
+                            {cityItem}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="City or Town"
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
+                      />
+                    )}
                   </div>
                 </div>
 
+                {/* Postal Code */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Country (Detected via IP)</label>
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Postal / ZIP Code</label>
                   <input
                     type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
+                    placeholder="W1T 1HT"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
                     required
                     className="w-full px-4 py-3 bg-white border border-walters-border rounded-xl text-xs focus:outline-none focus:border-walters-navy"
                   />
@@ -308,11 +740,14 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
               </div>
             </section>
 
+            {/* Payment Section */}
             <section className="space-y-4">
               <h2 className="font-serif text-xl font-bold text-walters-navy">Payment method</h2>
               <div className="space-y-4 bg-white p-5 border border-walters-border rounded-2xl">
                 <div>
-                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">Card number (16 Digits)</label>
+                  <label className="block text-[11px] font-semibold text-walters-slate mb-1">
+                    Card number (16 Digits)
+                  </label>
                   <input
                     type="text"
                     placeholder="4242 4242 4242 4242"
@@ -336,7 +771,9 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-walters-slate mb-1">CVC (3 or 4 Digits)</label>
+                    <label className="block text-[11px] font-semibold text-walters-slate mb-1">
+                      CVC (3 or 4 Digits)
+                    </label>
                     <input
                       type="text"
                       placeholder="123"
@@ -351,6 +788,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ cartItems, onClearCart }) =>
             </section>
           </div>
 
+          {/* Sidebar Summary */}
           <div className="lg:col-span-5">
             <div className="bg-walters-offwhite p-6 rounded-2xl border border-walters-border space-y-6 sticky top-8">
               <h2 className="font-serif text-xl font-bold text-walters-navy">Order summary</h2>

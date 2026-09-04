@@ -1,4 +1,4 @@
-//src/pages/Register.tsx
+//src/pages/Login.tsx
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -69,9 +69,6 @@ export const Login: React.FC = () => {
             Precision eyewear, <br />
             delivered to your door.
           </h1>
-          <p className="font-sans text-xs text-white/80 leading-relaxed max-w-sm">
-            Mock accounts — no data leaves this browser.
-          </p>
         </div>
 
         <div className="relative z-10 space-y-1">

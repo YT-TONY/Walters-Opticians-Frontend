@@ -13,6 +13,7 @@ import { CartProvider } from './context/CartProvider';
 import { OrderProvider } from './context/OrderProvider';
 
 // Layout & UI Components
+import { TopUtilityBar } from './components/TopUtilityBar';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { PrescriptionModal } from './components/PrescriptionModal';
@@ -37,7 +38,7 @@ import { AdminStockInventory } from './pages/admin/StockInventory';
 import { OrdersTab } from './pages/admin/OrdersTab';
 import { BookingsTab } from './pages/admin/BookingsTab';
 import { AdminMarketOverview } from './pages/admin/MarketOverview';
-import { AdminSettings } from './pages/admin/Adminsettings';
+import { AdminSettings } from './pages/admin/AdminSettings';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -53,8 +54,12 @@ const AppContent: React.FC = () => {
     handleClearCart
   } = useCart();
 
-  // Suppress public store header and floating chatbot inside the admin portal
+  // Route visibility checks
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAuthRoute = ['/login', '/register'].includes(location.pathname);
+  
+  // Suppress public store header (utility bar & navbar) on admin and auth pages
+  const hideHeader = isAdminRoute || isAuthRoute;
 
   // Helper redirect target based on user role
   const authenticatedRedirect = isAdmin ? "/admin/dashboard" : "/";
@@ -63,8 +68,13 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-cream flex flex-col font-sans text-charcoal">
       <Toaster position="bottom-right" richColors />
 
-      {/* Render Public Navbar only for store routes */}
-      {!isAdminRoute && <Navbar />}
+      {/* Render Top Utility Bar & Public Navbar together */}
+      {!hideHeader && (
+        <header className="w-full sticky top-0 z-50">
+          <TopUtilityBar />
+          <Navbar />
+        </header>
+      )}
 
       <main className="grow">
         <Routes>
@@ -126,7 +136,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Global AI Chatbot (Only active on storefront) */}
-      {!isAdminRoute && <ChatBot />}
+      {!isAdminRoute && !isAuthRoute && <ChatBot />}
     </div>
   );
 };

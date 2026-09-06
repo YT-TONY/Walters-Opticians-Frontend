@@ -2,6 +2,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import type { Category } from '../../context/Category';
+import { BrandsVirtualCategory } from './constants';
 
 interface MegaMenuTabNavProps {
   categories: Category[];
@@ -10,18 +11,42 @@ interface MegaMenuTabNavProps {
   onClose: () => void;
 }
 
+const EXCLUDED_CATEGORY_SLUGS = ['lenses', 'to-notice', 'to_notice', 'to-notice-2'];
+
 export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
   categories,
   activeCategoryId,
   onSelectCategory,
   onClose,
 }) => {
+  const cleanCategories = categories.filter((cat) => {
+    const slugLower = cat.slug.toLowerCase();
+    const nameLower = cat.name.toLowerCase();
+    
+    if (slugLower.includes('contact')) return true;
+    
+    return !EXCLUDED_CATEGORY_SLUGS.some(
+      (ex) => slugLower === ex || nameLower === ex || nameLower === 'to notice'
+    );
+  });
+
+  const finalCategories: Category[] = [];
+  cleanCategories.forEach((cat) => {
+    finalCategories.push(cat);
+    if (cat.slug.toLowerCase().includes('sunglass')) {
+      finalCategories.push(BrandsVirtualCategory);
+    }
+  });
+
+  if (!finalCategories.some((cat) => cat.id === -100)) {
+    finalCategories.splice(2, 0, BrandsVirtualCategory);
+  }
+
   return (
     <div className="w-full bg-white px-4 sm:px-6 lg:px-8 border-b border-walters-border/15">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-11">
-        {/* Navigation Category Tabs */}
         <nav className="flex items-center space-x-8 tracking-wider overflow-x-auto no-scrollbar">
-          {categories.map((cat) => {
+          {finalCategories.map((cat) => {
             const isActive = cat.id === activeCategoryId;
             const isSale = cat.slug.toLowerCase() === 'sale' || cat.name.toLowerCase() === 'sale';
 
@@ -61,7 +86,6 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
           })}
         </nav>
 
-        {/* Minimalist Close Action */}
         <button
           type="button"
           onClick={onClose}

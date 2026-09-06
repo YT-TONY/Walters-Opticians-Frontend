@@ -1,14 +1,16 @@
+// src/components/megamenu/MegaMenu.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { MegaMenuSubcategories, type Category } from './MegaMenuSubCategoryList';
+import type { Category } from '../../context/Category';
+import { MegaMenuTabNav } from './MegaMenuTabNav';
+import { MegaMenuSubCategoryList } from './MegaMenuSubCategoryList';
 import { ShapesAndTypesGrid } from './ShapesAndTypesGrid';
 import { BrandsGrid } from './BrandsGrid';
-import { FeaturedBanner } from './FeaturedBanner';
+import { FeatureBanner } from './FeaturedBanner';
 
 interface MegaMenuProps {
   isOpen: boolean;
-  categories: Category[];
   activeCategoryId: number | null;
+  categories: Category[];
   onCategoryHover: (id: number) => void;
   onClose: () => void;
   onMouseEnter?: () => void;
@@ -17,8 +19,8 @@ interface MegaMenuProps {
 
 export const MegaMenu: React.FC<MegaMenuProps> = ({
   isOpen,
-  categories,
   activeCategoryId,
+  categories,
   onCategoryHover,
   onClose,
   onMouseEnter,
@@ -26,82 +28,71 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const currentCategory = categories.find((c) => c.id === activeCategoryId) || categories[0];
-  const isBrandsTab = currentCategory?.slug === 'brands' || currentCategory?.name?.toLowerCase() === 'brands';
+  const activeCategory =
+    categories.find((cat) => cat.id === activeCategoryId) || categories[0] || null;
+
+  const isSunglasses = activeCategory?.slug.toLowerCase().includes('sunglass');
 
   return (
-    <>
-      <div 
-        onClick={onClose}
-        className="fixed inset-0 top-24 bg-black/40 z-30 transition-opacity"
+    <div
+      className="absolute top-full left-0 w-full bg-white shadow-2xl z-50 border-b border-walters-border/20 animate-in fade-in duration-150"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* 1. TOP TAB NAV */}
+      <MegaMenuTabNav
+        categories={categories}
+        activeCategoryId={activeCategory?.id || null}
+        onSelectCategory={onCategoryHover}
+        onClose={onClose}
       />
 
-      <div
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-        className="absolute top-full left-0 w-full bg-walters-cream border-t border-b border-walters-border shadow-xl z-40"
-      >
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          
-          {/* Top Category Nav */}
-          <div className="flex items-center space-x-8 border-b border-walters-border/40 pb-3 mb-6 text-xs font-semibold uppercase tracking-wider">
-            <Link 
-              to="/" 
-              onClick={onClose} 
-              className="py-1 border-b-2 border-transparent hover:border-walters-gold text-walters-charcoal transition-all"
-            >
-              Home
-            </Link>
+      {/* 2. DYNAMIC CONTENT BODY */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-start justify-start gap-10">
+          {/* COLUMN 1: Dynamic Subcategories */}
+          <MegaMenuSubCategoryList
+            activeCategory={activeCategory}
+            onItemClick={onClose}
+          />
 
-            {categories.map((cat) => {
-              const isActive = currentCategory?.id === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onMouseEnter={() => onCategoryHover(cat.id)}
-                  onClick={() => onCategoryHover(cat.id)}
-                  className={`py-1 cursor-pointer border-b-2 transition-all ${
-                    isActive 
-                      ? 'border-walters-gold text-walters-gold font-bold' 
-                      : 'border-transparent text-walters-charcoal hover:border-walters-gold'
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              );
-            })}
+          {/* COLUMN 2 & 3 CONTAINER */}
+          {isSunglasses ? (
+            <div className="flex-1 max-w-155 flex flex-col space-y-2">
+              {/* Top Row: Shapes Grid + Brands Grid Side-by-Side */}
+              <div className="flex items-start gap-8">
+                <ShapesAndTypesGrid
+                  categorySlug={activeCategory?.slug || 'sunglasses'}
+                  onItemClick={onClose}
+                />
+                <BrandsGrid
+                  variant="mini"
+                  categorySlug={activeCategory?.slug || 'sunglasses'}
+                  onClose={onClose}
+                />
+              </div>
 
-            <Link 
-              to="/catalog" 
-              onClick={onClose} 
-              className="py-1 border-b-2 border-transparent hover:border-walters-gold text-walters-charcoal transition-all"
-            >
-              Catalog
-            </Link>
-
-            <button 
-              onClick={onClose} 
-              className="ml-auto text-xs text-walters-slate hover:text-walters-navy cursor-pointer"
-            >
-              Close ✕
-            </button>
-          </div>
-
-          {/* 3-Column Content Layout */}
-          <div className="grid grid-cols-12 gap-6 items-stretch">
-            <MegaMenuSubcategories currentCategory={currentCategory} onClose={onClose} />
-
-            {isBrandsTab ? (
-              <BrandsGrid onClose={onClose} />
-            ) : (
-              <ShapesAndTypesGrid onClose={onClose} />
-            )}
-
-            <FeaturedBanner categorySlug={currentCategory?.slug} onClose={onClose} />
-          </div>
-
+              {/* Bottom Row: Spotlight Cards starting directly beneath the frames */}
+              <FeatureBanner
+                categorySlug={activeCategory?.slug || 'sunglasses'}
+                onItemClick={onClose}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Optical Glasses View */}
+              <ShapesAndTypesGrid
+                categorySlug={activeCategory?.slug || 'glasses'}
+                onItemClick={onClose}
+              />
+              <FeatureBanner
+                categorySlug={activeCategory?.slug || 'glasses'}
+                onItemClick={onClose}
+              />
+            </>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 };

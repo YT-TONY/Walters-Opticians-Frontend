@@ -11,6 +11,7 @@ export interface SubCategory {
   id: number;
   name: string;
   slug: string;
+  display_order?: number;
   brands: Brand[];
 }
 

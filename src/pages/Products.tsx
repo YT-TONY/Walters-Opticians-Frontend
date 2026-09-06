@@ -100,7 +100,7 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
   }, [filteredProducts]);
 
   return (
-    <div className="min-h-screen bg-cream10 px-6 py-8">
+    <div className="min-h-screen bg-walters-cream px-6 py-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header and Search Filters */}

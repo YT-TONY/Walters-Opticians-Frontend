@@ -220,7 +220,7 @@ export const Navbar: React.FC = () => {
 
               {/* DROPDOWN CARD */}
               {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-walters-border/60 py-2 z-50 text-xs text-walters-charcoal animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl border border-walters-border/60 py-2 z-50 text-xs text-walters-charcoal animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-2.5 border-b border-walters-border/30">
                     <p className="font-bold text-walters-navy truncate">{user?.full_name || 'Valued Customer'}</p>
                     <p className="text-[11px] text-walters-slate truncate">{user?.email}</p>
@@ -293,7 +293,7 @@ export const Navbar: React.FC = () => {
               className="p-2 text-walters-navy hover:text-walters-gold transition-colors"
               title="Favorites & Wishlist"
             >
-              <Heart className="w-4 h-4 fill-current text-walters-navy hover:text-walters-gold transition-colors" />
+              <Heart className="w-6 h-10 fill-current text-walters-navy hover:text-walters-gold transition-colors" />
             </Link>
           )}
 

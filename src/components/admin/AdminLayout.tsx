@@ -7,7 +7,7 @@ export const AdminLayout: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-row font-sans antialiased">
+    <div className="min-h-screen bg-walters-cream flex flex-row font-sans antialiased">
       {/* Sliding Sidebar */}
       <AdminSidebar
         isCollapsed={isSidebarCollapsed}

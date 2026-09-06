@@ -10,8 +10,7 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight,
-  Glasses,
-  Settings // Imported Settings Icon
+  Settings 
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -45,7 +44,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
     { label: 'Appointments', path: '/admin/bookings', icon: Calendar },
     { label: 'Market Overview', path: '/admin/analytics', icon: BarChart3 },
-    { label: 'Global Settings', path: '/admin/settings', icon: Settings }, // Added Settings Route
+    { label: 'Global Settings', path: '/admin/settings', icon: Settings },
   ];
 
   return (
@@ -58,8 +57,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <div>
         <div className="flex items-center justify-between p-4 border-b border-[#1B2B4C]">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="p-2 bg-[#1B75BC] rounded-xl shrink-0">
-              <Glasses className="w-5 h-5 text-white" />
+            <div className="p-1.5 bg-[#1B75BC] rounded-xl shrink-0 flex items-center justify-center">
+              <img src="/public/Logo.png" alt="Walters Logo" className="w-5 h-5 object-contain" />
             </div>
             {!isCollapsed && (
               <div className="truncate">

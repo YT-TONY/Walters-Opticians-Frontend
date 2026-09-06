@@ -1,16 +1,29 @@
 // src/components/Navbar.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Phone, Menu, X, Search, ChevronRight, Shield, LogOut, Heart } from 'lucide-react';
+import { 
+  ShoppingBag, 
+  User, 
+  Menu, 
+  X, 
+  Search, 
+  ChevronRight, 
+  Shield, 
+  LogOut, 
+  Heart, 
+  ChevronDown,
+  Package,
+} from 'lucide-react';
+
 import { useCart } from '../hooks/useCart';
 import { useCategories } from '../hooks/useCategories';
 import { useAuth } from '../hooks/useAuth';
 import { MegaMenu } from './megamenu/MegaMenu';
-import { TopUtilityBar } from './TopUtilityBar';
 
 export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [animateBadge, setAnimateBadge] = useState(false);
 
@@ -24,10 +37,12 @@ export const Navbar: React.FC = () => {
 
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const totalItemCount = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
   const prevCountRef = useRef(totalItemCount);
 
+  // Badge animation trigger on cart add
   useEffect(() => {
     if (totalItemCount > prevCountRef.current) {
       const animationFrame = requestAnimationFrame(() => setAnimateBadge(true));
@@ -40,6 +55,17 @@ export const Navbar: React.FC = () => {
     }
     prevCountRef.current = totalItemCount;
   }, [totalItemCount]);
+
+  // Click outside to close profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleOpenMegaMenu = (catId?: number) => {
     if (isAdmin) return;
@@ -64,6 +90,7 @@ export const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
+    setIsProfileDropdownOpen(false);
     closeMegaMenu();
     navigate('/login');
   };
@@ -102,37 +129,26 @@ export const Navbar: React.FC = () => {
 
   return (
     <header 
-      className="sticky top-0 z-50 w-full bg-walters-cream font-sans text-walters-charcoal shadow-[0_2px_8px_rgba(26,26,26,0.08)]"
+      className="sticky top-0 z-50 w-full bg-white font-sans text-walters-charcoal shadow-xs border-b border-walters-border/40"
       onMouseLeave={handleCategoryMouseLeave}
     >
-      {/* 1. TOP NAVY UTILITY BAR */}
-      <TopUtilityBar />
-
-      {/* 2. MAIN NAVBAR HEADER BAR */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-center gap-50 max-w-7xl mx-auto">
+      {/* MAIN NAVBAR HEADER BAR */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-16 max-w-7xl mx-auto">
         
-        {/* LEFT: Logo | Brand Name | Phone | Hamburger Icon */}
-        <div className="flex items-center space-x-3 sm:space-x-4">
-          <Link to="/" className="flex items-center space-x-2.5" onClick={closeMegaMenu}>
+        {/* LEFT: [Logo] WALTERS OPTICIANS | [Hamburger Menu] */}
+        <div className="flex items-center space-x-3 shrink-0">
+          <Link to="/" className="flex items-center space-x-2.5 group" onClick={closeMegaMenu}>
             <img 
-              src="/logo.png" 
+              src="/favicon.svg" 
               alt="Walters Opticians" 
-              className="h-8 sm:h-10 w-auto object-contain shrink-0" 
+              className="h-9 sm:h-11 w-auto object-contain shrink-0" 
             />
-            <span className="font-serif text-lg sm:text-2xl font-bold tracking-[0.15em] uppercase text-walters-navy transition-colors duration-200 hover:text-walters-gold hidden xs:inline-block">
+            <span className="font-serif text-lg sm:text-xl font-bold tracking-[0.12em] uppercase text-walters-navy transition-colors duration-200 hover:text-walters-gold hidden sm:inline-block">
               Walters Opticians
             </span>
           </Link>
 
-          <span className="hidden lg:inline-block text-walters-border">|</span>
-
-          <a
-            href="tel:+441427616506"
-            className="hidden lg:flex items-center space-x-1.5 text-xs font-semibold text-walters-slate opacity-70 hover:opacity-100 transition-opacity"
-          >
-            <Phone className="w-3.5 h-3.5 text-walters-navy" />
-            <span>+44 (0)1427 616506</span>
-          </a>
+          <span className="hidden md:inline-block text-walters-border">|</span>
 
           {!isAdmin && (
             <button
@@ -147,16 +163,16 @@ export const Navbar: React.FC = () => {
           )}
         </div>
 
-        {/* CENTER: Functional Search Bar */}
+        {/* CENTER: Search Bar */}
         {!isAdmin && (
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
+          <div className="hidden md:flex flex-1 max-w-lg mx-2">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search optical frames, brands, or prescription types..."
-                className="w-full bg-white/90 border border-walters-border rounded-full py-2 pl-10 pr-9 text-xs text-walters-charcoal placeholder-walters-slate/60 focus:outline-none focus:ring-1 focus:ring-walters-gold focus:bg-white transition-all shadow-2xs"
+                className="w-full bg-white border border-walters-border rounded-full py-2 pl-10 pr-9 text-xs text-walters-charcoal placeholder-walters-slate/60 focus:outline-none focus:ring-1 focus:ring-walters-gold focus:border-walters-gold transition-all shadow-2xs"
               />
               <button
                 type="submit"
@@ -181,54 +197,95 @@ export const Navbar: React.FC = () => {
         )}
 
         {/* RIGHT: Actions */}
-        <div className="flex items-center space-x-3 sm:space-x-4">
+        <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
+          
+          {/* PROFILE / ACCOUNT WITH SEAMLESS DROPDOWN */}
           {isAuthenticated ? (
-            <>
-              {isAdmin ? (
-                <>
-                  <Link
-                    to="/admin"
-                    onClick={closeMegaMenu}
-                    className="hidden xl:flex items-center space-x-1 text-xs font-bold text-walters-gold hover:text-walters-navy transition-colors"
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Admin</span>
-                  </Link>
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="flex items-center space-x-2 group cursor-pointer focus:outline-none"
+                aria-expanded={isProfileDropdownOpen}
+                aria-label="User Account Menu"
+              >
+                <div className="w-8 h-8 rounded-full bg-walters-navy/10 border border-walters-navy/20 flex items-center justify-center text-walters-navy group-hover:bg-walters-navy group-hover:text-white transition-all shadow-2xs">
+                  <User className="w-4 h-4 fill-current" />
+                </div>
+                <span className="hidden sm:inline-block text-xs font-semibold text-walters-navy group-hover:text-walters-gold max-w-28 truncate transition-colors">
+                  {user?.full_name?.split(' ')[0] || 'Account'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-walters-navy/60 transition-transform duration-200 hidden sm:inline-block ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="hidden sm:flex items-center space-x-1.5 text-xs font-semibold text-walters-slate hover:text-rose-600 transition-colors cursor-pointer"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/profile"
-                  onClick={closeMegaMenu}
-                  className="hidden sm:flex items-center space-x-1.5 text-xs font-semibold text-walters-navy hover:text-walters-gold transition-colors cursor-pointer"
-                  title="View Profile & Orders"
-                >
-                  <User className="w-4 h-4 text-walters-navy shrink-0" />
-                  <span className="max-w-30 truncate">{user?.full_name || 'Account'}</span>
-                </Link>
+              {/* DROPDOWN CARD */}
+              {isProfileDropdownOpen && (
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-walters-border/60 py-2 z-50 text-xs text-walters-charcoal animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-4 py-2.5 border-b border-walters-border/30">
+                    <p className="font-bold text-walters-navy truncate">{user?.full_name || 'Valued Customer'}</p>
+                    <p className="text-[11px] text-walters-slate truncate">{user?.email}</p>
+                  </div>
+
+                  <div className="py-1">
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center space-x-2.5 px-4 py-2 hover:bg-walters-cream text-walters-charcoal hover:text-walters-navy transition-colors"
+                    >
+                      <User className="w-4 h-4 text-walters-slate" />
+                      <span>My Profile Details</span>
+                    </Link>
+
+                    <Link
+                      to="/profile?tab=orders"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center space-x-2.5 px-4 py-2 hover:bg-walters-cream text-walters-charcoal hover:text-walters-navy transition-colors"
+                    >
+                      <Package className="w-4 h-4 text-walters-slate" />
+                      <span>Order History</span>
+                    </Link>
+
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center space-x-2.5 px-4 py-2 hover:bg-walters-cream text-walters-gold font-bold transition-colors"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Admin Control Panel</span>
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="pt-1 border-t border-walters-border/30">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center space-x-2.5 px-4 py-2 text-rose-600 hover:bg-rose-50 font-semibold text-left transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
               )}
-            </>
+            </div>
           ) : (
             <Link
               to="/login"
               onClick={closeMegaMenu}
-              className="hidden sm:flex items-center space-x-1.5 text-xs font-medium text-walters-charcoal opacity-70 hover:opacity-100 transition-opacity"
+              className="flex items-center space-x-2 group cursor-pointer"
             >
-              <User className="w-4 h-4 text-walters-navy" />
-              <span>Sign In</span>
+              <div className="w-8 h-8 rounded-full bg-walters-navy/10 border border-walters-navy/20 flex items-center justify-center text-walters-navy group-hover:bg-walters-navy group-hover:text-white transition-all shadow-2xs">
+                <User className="w-4 h-4 fill-current" />
+              </div>
+              <span className="hidden sm:inline-block text-xs font-medium text-walters-charcoal opacity-70 hover:opacity-100 transition-opacity">
+                Sign In
+              </span>
             </Link>
           )}
 
-          {/* WISHLIST BUTTON */}
+          {/* SOLID FAVORITE HEART ICON */}
           {!isAdmin && (
             <Link
               to="/favorites"
@@ -236,11 +293,11 @@ export const Navbar: React.FC = () => {
               className="p-2 text-walters-navy hover:text-walters-gold transition-colors"
               title="Favorites & Wishlist"
             >
-              <Heart className="w-4 h-4" />
+              <Heart className="w-4 h-4 fill-current text-walters-navy hover:text-walters-gold transition-colors" />
             </Link>
           )}
 
-          {/* DYNAMIC BAG BUTTON */}
+          {/* ORIGINAL BAG BUTTON */}
           {!isAdmin && (
             <button
               type="button"
@@ -264,6 +321,7 @@ export const Navbar: React.FC = () => {
             </button>
           )}
 
+          {/* MOBILE MENU TOGGLE */}
           <button
             type="button"
             onClick={() => {
@@ -295,7 +353,7 @@ export const Navbar: React.FC = () => {
 
       {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-walters-cream px-6 pt-2 pb-6 space-y-4 border-t border-walters-border/40 max-h-[80vh] overflow-y-auto">
+        <div className="md:hidden bg-white px-6 pt-2 pb-6 space-y-4 border-t border-walters-border/40 max-h-[80vh] overflow-y-auto">
           {!isAdmin && (
             <form onSubmit={handleSearchSubmit} className="relative w-full pt-2">
               <input
@@ -324,39 +382,27 @@ export const Navbar: React.FC = () => {
             <div className="pb-3 border-b border-walters-border/30 space-y-2">
               {isAuthenticated ? (
                 <>
-                  {isAdmin ? (
-                    <>
-                      <Link
-                        to="/admin"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center space-x-2 text-xs font-bold text-walters-gold hover:underline py-1"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span>Admin Dashboard</span>
-                      </Link>
+                  <p className="text-xs font-bold text-walters-navy py-1">{user?.full_name}</p>
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center space-x-2 text-xs font-medium text-walters-slate hover:text-walters-gold py-1"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>My Profile</span>
+                  </Link>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          handleLogout();
-                        }}
-                        className="flex items-center space-x-2 text-xs font-medium text-rose-600 py-1 cursor-pointer"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign Out</span>
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      to="/profile"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 text-xs font-bold text-walters-navy hover:text-walters-gold py-1"
-                    >
-                      <User className="w-4 h-4" />
-                      <span>{user?.full_name || user?.email || 'My Profile'}</span>
-                    </Link>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="flex items-center space-x-2 text-xs font-medium text-rose-600 py-1 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
                 </>
               ) : (
                 <Link

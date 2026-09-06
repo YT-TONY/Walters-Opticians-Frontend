@@ -65,7 +65,7 @@ const AppContent: React.FC = () => {
   const authenticatedRedirect = isAdmin ? "/admin/dashboard" : "/";
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col font-sans text-charcoal">
+    <div className="min-h-screen bg-walters-cream flex flex-col font-sans text-charcoal">
       <Toaster position="bottom-right" richColors />
 
       {/* Render Top Utility Bar & Public Navbar together */}

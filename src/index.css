@@ -8,7 +8,7 @@
 
   --color-navy: #021438;
   --color-cream: #FBFAF5;
-  --color-offwhite: #F3F0E6;
+  --color-offwhite: #FFFFFF;
   --color-gold: #E6AA38;
   --color-charcoal: #1A1A1A;
   --color-slate: #5E6470;
@@ -17,8 +17,8 @@
 
 :root {
   --navy: #021438;
-  --cream: #FBFAF5;
-  --offwhite: #F3F0E6;
+  --cream: #FFFFFF;
+  --offwhite: #FFFFFF;
   --gold: #E6AA38;
   --charcoal: #1A1A1A;
   --slate: #5E6470;

@@ -55,26 +55,26 @@ export const ShapesAndTypesGrid: React.FC<ShapesAndTypesGridProps> = ({
   const activeShapes = isSunglasses ? SUNGLASS_SHAPES : OPTICAL_SHAPES;
 
   return (
-    <div className="w-112.5 shrink-0 space-y-4">
-      {/* Popular Shapes Grid */}
+    <div className="w-115 shrink-0 space-y-5">
+      {/* Popular Shapes Grid - Increased Size */}
       <div>
-        <h4 className="text-[11px] font-semibold uppercase tracking-widest text-walters-gold/90 mb-2.5">
+        <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
           Popular Shapes
         </h4>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2.5">
           {activeShapes.map((shape) => (
             <Link
               key={shape.slug}
               to={`/catalog?category=${categorySlug}&shape=${shape.slug}`}
               onClick={onItemClick}
-              className="flex flex-col items-center justify-center p-1.5 rounded-xl hover:bg-walters-cream/50 transition-all group"
+              className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-neutral-100 hover:border-walters-navy/30 bg-white hover:bg-walters-cream/30 transition-all group shadow-2xs"
             >
               <img
                 src={shape.image}
                 alt={shape.name}
-                className="h-7 w-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all"
+                className="h-9 w-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all"
               />
-              <span className="text-[10px] font-medium text-walters-charcoal/80 group-hover:text-walters-navy mt-1">
+              <span className="text-xs font-semibold text-neutral-700 group-hover:text-walters-navy mt-1.5">
                 {shape.name}
               </span>
             </Link>
@@ -82,26 +82,26 @@ export const ShapesAndTypesGrid: React.FC<ShapesAndTypesGridProps> = ({
         </div>
       </div>
 
-      {/* Optical Frame Rim Types */}
+      {/* Optical Frame Rim Types - Increased Size */}
       {!isSunglasses && (
         <div>
-          <h4 className="text-[11px] font-semibold uppercase tracking-widest text-walters-gold/90 mb-2.5">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
             Popular Frame Types
           </h4>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2.5">
             {GLASSES_TYPES.map((type) => (
               <Link
                 key={type.slug}
                 to={`/catalog?category=${categorySlug}&rim=${type.slug}`}
                 onClick={onItemClick}
-                className="flex flex-col items-center justify-center p-1.5 rounded-xl hover:bg-walters-cream/50 transition-all group"
+                className="flex flex-col items-center justify-center p-3 rounded-xl border border-neutral-100 hover:border-walters-navy/30 bg-white hover:bg-walters-cream/30 transition-all group shadow-2xs"
               >
                 <img
                   src={type.image}
                   alt={type.name}
-                  className="h-7 w-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all"
+                  className="h-9 w-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all"
                 />
-                <span className="text-[10px] font-medium text-walters-charcoal/80 group-hover:text-walters-navy mt-1">
+                <span className="text-xs font-semibold text-neutral-700 group-hover:text-walters-navy mt-1.5">
                   {type.name}
                 </span>
               </Link>

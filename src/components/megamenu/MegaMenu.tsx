@@ -1,6 +1,5 @@
 // src/components/megamenu/MegaMenu.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
 import type { Category } from '../../context/Category';
 import { MegaMenuTabNav } from './MegaMenuTabNav';
 import { MegaMenuSubCategoryList } from './MegaMenuSubCategoryList';
@@ -40,7 +39,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
 
   return (
     <div
-      className="absolute top-full left-0 w-full bg-white shadow-2xl z-50 border-b border-walters-border/20 animate-in fade-in duration-150"
+      className="absolute top-full left-0 w-full bg-white shadow-2xl z-50 border-b border-neutral-200 animate-in fade-in duration-150"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -51,53 +50,21 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
         onClose={onClose}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-8 py-8">
         {isBrandsTab ? (
-          <div className="flex items-start justify-center gap-10">
-            <BrandsGrid variant="mega-view" onClose={onClose} />
-
-            <div className="w-64 shrink-0 space-y-4">
-              <Link
-                to="/catalog?tag=luxury"
-                onClick={onClose}
-                className="relative block h-36 rounded-xl overflow-hidden group shadow-2xs"
-              >
-                <img
-                  src="/IMAGES/COVERS/LUXURY HOOK.png"
-                  alt="Shop Luxury"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent flex items-end p-3">
-                  <span className="text-white font-bold text-xs">Shop Luxury</span>
-                </div>
-              </Link>
-
-              <Link
-                to="/catalog?tag=smart-eyewear"
-                onClick={onClose}
-                className="relative block h-36 rounded-xl overflow-hidden group shadow-2xs"
-              >
-                <img
-                  src="/IMAGES/GLASSES/TYPES/FULL-RIM.png"
-                  alt="Smart Eyewear"
-                  className="w-full h-full object-contain p-4 bg-neutral-100 group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent flex items-end p-3">
-                  <span className="text-white font-bold text-xs">Smart Eyewear</span>
-                </div>
-              </Link>
-            </div>
-          </div>
+          /* BRANDS TAB VIEW: BrandsGrid now completely controls the full-width layout */
+          <BrandsGrid variant="mega-view" onClose={onClose} />
         ) : (
-          <div className="flex items-start justify-start gap-10">
+          /* OPTICAL & SUNGLASSES VIEWS */
+          <div className="flex items-start justify-start gap-12">
             <MegaMenuSubCategoryList
               activeCategory={activeCategory}
               onItemClick={onClose}
             />
 
             {isSunglasses ? (
-              <div className="flex-1 max-w-155 flex flex-col space-y-2">
-                <div className="flex items-start gap-8">
+              <div className="flex-1 max-w-2xl flex flex-col space-y-5">
+                <div className="flex items-start gap-10">
                   <ShapesAndTypesGrid
                     categorySlug={activeCategory?.slug || 'sunglasses'}
                     onItemClick={onClose}

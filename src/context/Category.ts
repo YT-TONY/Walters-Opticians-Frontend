@@ -4,7 +4,13 @@ export interface Brand {
   id: number;
   name: string;
   slug: string;
+  logo_url?: string;
   is_popular?: boolean;
+  is_top_brand?: boolean;
+  promo_tag?: string;
+  category_type?: 'glasses' | 'sunglasses' | 'both';
+  sales_count?: number;
+  created_at?: string;
 }
 
 export interface SubCategory {

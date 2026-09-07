@@ -4,12 +4,19 @@ import { Link } from 'react-router-dom';
 import type { Brand } from '../../context/Category';
 import { CategoryContext } from '../../context/CategoryContext';
 
+// Extended Brand interface supporting backend & admin badge metadata
+export interface ExtendedBrand extends Brand {
+  badge_text?: string;  // e.g. "NEW", "SALE", "PROMO", "20% OFF"
+  badge_color?: string; // e.g. "bg-rose-600", "bg-amber-500", "bg-emerald-600"
+  promo_tag?: string;   // Backend field from FastAPI
+  created_at?: string;  // ISO Timestamp from FastAPI
+}
+
 interface BrandsGridProps {
   variant?: 'full' | 'mini' | 'mega-view';
   categorySlug?: string;
   onClose?: () => void;
-  brands?: Brand[];
-  rightContent?: React.ReactNode;
+  brands?: ExtendedBrand[];
 }
 
 const LOCAL_LOGO_MAP: Record<string, string> = {
@@ -43,11 +50,13 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
   categorySlug = 'sunglasses',
   onClose,
   brands = [],
-  rightContent,
 }) => {
   const [activeType, setActiveType] = useState<'glasses' | 'sunglasses'>('glasses');
   const [activeTab, setActiveTab] = useState<'top' | 'all'>('top');
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  
+  // Capture current timestamp safely in initial state initializer
+  const [now] = useState(() => Date.now());
 
   const categoryCtx = useContext(CategoryContext);
 
@@ -55,13 +64,13 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     if (brands.length > 0) return brands;
 
     const categories = categoryCtx?.categories || [];
-    const brandMap = new Map<string, Brand>();
-    
+    const brandMap = new Map<string, ExtendedBrand>();
+
     categories.forEach((cat) => {
       cat.subcategories?.forEach((sub) => {
         sub.brands?.forEach((b) => {
           if (!brandMap.has(b.slug)) {
-            brandMap.set(b.slug, b);
+            brandMap.set(b.slug, b as ExtendedBrand);
           }
         });
       });
@@ -74,7 +83,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     setFailedImages((prev) => ({ ...prev, [slugKey]: true }));
   };
 
-  const getBrandLogo = (brand: Brand) => {
+  const getBrandLogo = (brand: ExtendedBrand) => {
     if (brand.logo_url && !failedImages[brand.slug]) {
       return brand.logo_url;
     }
@@ -90,15 +99,36 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     );
   }, [brandList, activeType]);
 
+  // Compute dynamic badges using the pure 'now' state
+  const processedBrands = useMemo(() => {
+    const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+    return filteredBrands.map((brand) => {
+      const creationTime = brand.created_at ? new Date(brand.created_at).getTime() : 0;
+      const isNew = creationTime > 0 && (now - creationTime) <= FOURTEEN_DAYS_MS;
+
+      const badgeText = brand.promo_tag || brand.badge_text || (isNew ? 'NEW' : undefined);
+      const badgeColor =
+        brand.badge_color || (brand.promo_tag ? 'bg-rose-600' : isNew ? 'bg-emerald-600' : 'bg-rose-600');
+
+      return {
+        ...brand,
+        badge_text: badgeText,
+        badge_color: badgeColor,
+      };
+    });
+  }, [filteredBrands, now]);
+
+  // 15 Brands total for the 5x3 Grid
   const topBrands = useMemo(() => {
-    const topFiltered = filteredBrands.filter((b) => b.is_top_brand || b.is_popular);
-    const list = topFiltered.length > 0 ? topFiltered : filteredBrands;
-    return list.slice(0, 16);
-  }, [filteredBrands]);
+    const topFiltered = processedBrands.filter((b) => b.is_top_brand || b.is_popular);
+    const list = topFiltered.length > 0 ? topFiltered : processedBrands;
+    return list.slice(0, 15);
+  }, [processedBrands]);
 
   const alphabeticalGrouped = useMemo(() => {
-    const sorted = [...filteredBrands].sort((a, b) => a.name.localeCompare(b.name));
-    const groups: { [key: string]: Brand[] } = {};
+    const sorted = [...processedBrands].sort((a, b) => a.name.localeCompare(b.name));
+    const groups: { [key: string]: ExtendedBrand[] } = {};
     sorted.forEach((brand) => {
       const letter = brand.name.charAt(0).toUpperCase();
       if (!groups[letter]) groups[letter] = [];
@@ -108,9 +138,9 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
       letter,
       brands: groups[letter],
     }));
-  }, [filteredBrands]);
+  }, [processedBrands]);
 
-  // SCALED-UP MINI BRANDS GRID (Used in Sunglasses dropdown column)
+  // MINI BRANDS GRID
   if (variant === 'mini') {
     return (
       <div className="w-60 shrink-0">
@@ -144,13 +174,14 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     );
   }
 
+  // MEGA MENU FULL VIEW
   if (variant === 'mega-view') {
     return (
-      <div className="w-full transition-all duration-300">
+      <div className="w-full flex flex-col items-center">
         
-        {/* WIDER CENTERED NAVY PILL SWITCH */}
+        {/* EXTENDED NAVY PILL SWITCH */}
         <div className="flex justify-center w-full mb-6">
-          <div className="inline-flex items-center rounded-full border border-neutral-300 bg-white p-1 shadow-xs w-96">
+          <div className="inline-flex items-center rounded-full border border-neutral-300 bg-white p-1 shadow-xs w-full max-w-xl">
             <button
               type="button"
               onClick={() => setActiveType('glasses')}
@@ -178,8 +209,8 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
         </div>
 
         {/* FULL-WIDTH SUB-FILTER TABS */}
-        <div className="w-full border-b border-neutral-200 mb-6">
-          <div className="flex justify-center space-x-16">
+        <div className="w-full border-b border-neutral-200 mb-6 flex justify-center">
+          <div className="flex space-x-16">
             <button
               type="button"
               onClick={() => setActiveTab('top')}
@@ -205,92 +236,86 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
           </div>
         </div>
 
-        {/* COLUMNS CONTAINER (Grid + Banners) */}
-        <div className="flex items-start gap-10 w-full">
-          
-          <div className="flex-1 w-full">
-            {/* 4x4 SCALED BRAND GRID WITH NAVY ACCENTS */}
-            {activeTab === 'top' && (
-              <div className="grid grid-cols-4 gap-4">
-                {topBrands.map((brand) => {
-                  const logoSrc = getBrandLogo(brand);
+        {/* 5x3 BRAND GRID WITH DIAGONAL CORNER BADGES */}
+        <div className="w-full">
+          {activeTab === 'top' && (
+            <div className="grid grid-cols-5 gap-3.5">
+              {topBrands.map((brand) => {
+                const logoSrc = getBrandLogo(brand);
 
-                  return (
-                    <Link
-                      key={brand.slug}
-                      to={`/catalog?category=${activeType}&brand=${brand.slug}`}
-                      onClick={onClose}
-                      className="flex items-center justify-center p-3.5 bg-white border border-neutral-200 rounded-none hover:border-walters-navy hover:shadow-xs transition-all h-22 group"
-                    >
-                      {logoSrc ? (
-                        <img
-                          src={logoSrc}
-                          alt={brand.name}
-                          onError={() => handleImageError(brand.logo_url ? brand.slug : `local-${brand.slug}`)}
-                          className="max-h-11 max-w-[85%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                        />
-                      ) : (
-                        <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider text-center group-hover:scale-105 transition-transform">
-                          {brand.name}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                return (
+                  <Link
+                    key={brand.slug}
+                    to={`/catalog?category=${activeType}&brand=${brand.slug}`}
+                    onClick={onClose}
+                    className="relative flex items-center justify-center p-3.5 bg-white border border-neutral-200 rounded-none hover:border-walters-navy hover:shadow-xs transition-all h-24 group overflow-hidden"
+                  >
+                    {/* Corner Ribbon Badge */}
+                    {brand.badge_text && (
+                      <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden pointer-events-none z-10">
+                        <div
+                          className={`absolute top-2.5 -left-6 w-24 -rotate-45 py-0.5 text-[8px] font-black uppercase tracking-wider text-center text-white shadow-xs ${
+                            brand.badge_color
+                          }`}
+                        >
+                          {brand.badge_text}
+                        </div>
+                      </div>
+                    )}
 
-            {/* ALL BRANDS ALPHABETICAL LIST */}
-            {activeTab === 'all' && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-6 gap-y-6 max-h-100 overflow-y-auto pr-2 pt-1 no-scrollbar">
-                {alphabeticalGrouped.map((group) => (
-                  <div key={group.letter} className="space-y-2">
-                    <h5 className="text-xs font-bold text-walters-navy border-b border-neutral-200 pb-1">
-                      {group.letter}
-                    </h5>
-                    <ul className="space-y-1.5 text-xs">
-                      {group.brands.map((b) => (
-                        <li key={b.slug}>
-                          <Link
-                            to={`/catalog?category=${activeType}&brand=${b.slug}`}
-                            onClick={onClose}
-                            className="text-neutral-700 hover:text-walters-navy transition-colors py-0.5 block truncate capitalize font-medium text-xs"
-                          >
-                            {b.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                    {logoSrc ? (
+                      <img
+                        src={logoSrc}
+                        alt={brand.name}
+                        onError={() => handleImageError(brand.logo_url ? brand.slug : `local-${brand.slug}`)}
+                        className="max-h-11 max-w-[85%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider text-center group-hover:scale-105 transition-transform">
+                        {brand.name}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
-          {/* RIGHT SIDE BANNERS (Only visible on 'Top Brands' tab) */}
-          {activeTab === 'top' && rightContent}
+          {activeTab === 'all' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-6 gap-y-6 max-h-100 overflow-y-auto pr-2 pt-1 no-scrollbar">
+              {alphabeticalGrouped.map((group) => (
+                <div key={group.letter} className="space-y-2">
+                  <h5 className="text-xs font-bold text-walters-navy border-b border-neutral-200 pb-1">
+                    {group.letter}
+                  </h5>
+                  <ul className="space-y-1.5 text-xs">
+                    {group.brands.map((b) => (
+                      <li key={b.slug} className="relative">
+                        <Link
+                          to={`/catalog?category=${activeType}&brand=${b.slug}`}
+                          onClick={onClose}
+                          className="text-neutral-700 hover:text-walters-navy transition-colors py-0.5 flex items-center justify-between truncate capitalize font-medium text-xs"
+                        >
+                          <span className="truncate">{b.name}</span>
+                          {b.badge_text && (
+                            <span
+                              className={`ml-1.5 px-1 py-0.2 text-[8px] font-black uppercase text-white rounded-2xs ${b.badge_color}`}
+                            >
+                              {b.badge_text}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <h4 className="text-xs font-semibold uppercase tracking-widest text-walters-gold/90 mb-3">
-        Featured Eyewear Brands
-      </h4>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {brandList.slice(0, 8).map((brand) => (
-          <Link
-            key={brand.slug}
-            to={`/catalog?brand=${brand.slug}`}
-            onClick={onClose}
-            className="flex items-center justify-center p-4 bg-white border border-neutral-200/80 rounded-none hover:border-walters-navy transition-all h-16 group"
-          >
-            <span className="text-xs font-semibold text-walters-navy uppercase">{brand.name}</span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
+  return null;
 };

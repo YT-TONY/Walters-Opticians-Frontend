@@ -6,6 +6,7 @@ import { MegaMenuSubCategoryList } from './MegaMenuSubCategoryList';
 import { ShapesAndTypesGrid } from './ShapesAndTypesGrid';
 import { BrandsGrid } from './BrandsGrid';
 import { FeatureBanner } from './FeaturedBanner';
+import { SaleGrid } from './SaleGrid';
 import { BrandsVirtualCategory } from './constants';
 
 interface MegaMenuProps {
@@ -35,6 +36,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
       : categories.find((cat) => cat.id === activeCategoryId) || categories[0] || null;
 
   const isBrandsTab = activeCategory?.id === BrandsVirtualCategory.id || activeCategory?.slug === 'brands';
+  const isSaleTab = activeCategory?.slug.toLowerCase() === 'sale' || activeCategory?.name.toLowerCase() === 'sale';
   const isSunglasses = activeCategory?.slug.toLowerCase().includes('sunglass');
 
   return (
@@ -52,8 +54,11 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
 
       <div className="max-w-7xl mx-auto px-8 py-8">
         {isBrandsTab ? (
-          /* BRANDS TAB VIEW: BrandsGrid now completely controls the full-width layout */
+          /* BRANDS TAB VIEW */
           <BrandsGrid variant="mega-view" onClose={onClose} />
+        ) : isSaleTab ? (
+          /* SALE TAB VIEW: 3 Promotional Banners */
+          <SaleGrid onClose={onClose} />
         ) : (
           /* OPTICAL & SUNGLASSES VIEWS */
           <div className="flex items-start justify-start gap-12">

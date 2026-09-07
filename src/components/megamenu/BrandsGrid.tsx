@@ -24,6 +24,14 @@ const FULL_BRANDS = [
   { name: 'Boss', slug: 'boss', logo: '/IMAGES/BRAND LOGO/BOSS.png' },
   { name: 'Persol', slug: 'persol', logo: '/IMAGES/BRAND LOGO/PERSOL.png' },
   { name: 'Nike', slug: 'nike', logo: '/IMAGES/BRAND LOGO/NIKE.png' },
+  { name: 'Kate Spade', slug: 'kate-spade', logo: '/IMAGES/BRAND LOGO/KATE SPADE.png' },
+  { name: 'Chanel', slug: 'chanel', logo: '/IMAGES/BRAND LOGO/CHANEL.png' },
+  { name: 'Dior', slug: 'dior', logo: '/IMAGES/BRAND LOGO/DIOR.png' },
+  { name: 'ralph lauren', slug: 'ralph-lauren', logo: '/IMAGES/BRAND LOGO/RALPH LAUREN.png' },
+  { name: 'stella mccartney', slug: 'stella-mccartney', logo: '/IMAGES/BRAND LOGO/STELLA McCARTNEY.png' },
+  { name: 'Valentino', slug: 'valentino', logo: '/IMAGES/BRAND LOGO/VALENTINO.png' },
+  { name: 'Versace', slug: 'versace', logo: '/IMAGES/BRAND LOGO/VERSACE.png' },
+  { name: 'Vogue', slug: 'vogue', logo: '/IMAGES/BRAND LOGO/VOGUE.png' }
 ];
 
 export const BrandsGrid: React.FC<BrandsGridProps> = ({

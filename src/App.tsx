@@ -16,6 +16,7 @@ import { OrderProvider } from './context/OrderProvider';
 import { TopUtilityBar } from './components/TopUtilityBar';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { HomeFeatureGrid } from './components/home/HomeFeatureGrid';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -84,6 +85,7 @@ const AppContent: React.FC = () => {
             element={
               <>
                 <Hero />
+                <HomeFeatureGrid />
                 <Catalog />
               </>
             } 

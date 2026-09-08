@@ -8,7 +8,8 @@ interface MegaMenuSubCategoryListProps {
   onItemClick?: () => void;
 }
 
-const EXCLUDED_SLUGS = ['inserts', 'blue-light-blocking-glasses', 'blue-light'];
+// Added 'sale' to EXCLUDED_SLUGS to prevent double rendering
+const EXCLUDED_SLUGS = ['inserts', 'blue-light-blocking-glasses', 'blue-light', 'sale'];
 
 // Fallback demographic subcategories for Sunglasses if DB list is unpopulated
 const DEFAULT_SUNGLASS_SUBS = [
@@ -33,18 +34,17 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
     return !EXCLUDED_SLUGS.some((ex) => slugLower.includes(ex) || nameLower.includes(ex));
   });
 
-  // Use DB subcategories if available; otherwise use default demographic list for Sunglasses
   const demographicList =
     filteredSubcategories.length > 0 ? filteredSubcategories : DEFAULT_SUNGLASS_SUBS;
 
   return (
     <div className="w-48 shrink-0 pr-4 space-y-3">
-      <h3 className="text-[11px] font-bold uppercase tracking-widest text-walters-navy">
+      <h3 className="text-xs font-bold uppercase tracking-widest text-walters-navy">
         {activeCategory.name}
       </h3>
 
       <nav className="flex flex-col space-y-1.5 text-xs font-medium">
-        {/* Demographic Links (Women's, Men's, Kids') */}
+        {/* Demographic Links */}
         {demographicList.map((sub) => (
           <Link
             key={sub.slug}
@@ -90,12 +90,12 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
           </>
         )}
 
-        {/* Single Isolated Red Sale Link */}
+        {/* Single Red Sale Link */}
         {!isSaleCategory && (
           <Link
             to={`/catalog?category=${categorySlug}&on_sale=true`}
             onClick={onItemClick}
-            className="text-rose-600 font-semibold text-[11px] hover:text-rose-700 hover:translate-x-1 transition-all py-1 block"
+            className="text-rose-600 font-bold text-xs hover:text-rose-700 hover:translate-x-1 transition-all py-1 block"
           >
             Sale
           </Link>

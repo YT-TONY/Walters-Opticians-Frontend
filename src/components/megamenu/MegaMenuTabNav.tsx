@@ -43,12 +43,16 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
   }
 
   return (
-    <div className="w-full bg-white px-4 sm:px-6 lg:px-8 border-b border-walters-border/15">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-11">
+    <div className="w-full bg-white border-b border-walters-border/15">
+      {/* Container aligned with max-w-7xl mx-auto px-8 */}
+      <div className="max-w-7xl mx-auto px-8 flex items-center justify-between h-11">
         <nav className="flex items-center space-x-8 tracking-wider overflow-x-auto no-scrollbar">
           {finalCategories.map((cat) => {
             const isActive = cat.id === activeCategoryId;
             const isSale = cat.slug.toLowerCase() === 'sale' || cat.name.toLowerCase() === 'sale';
+            
+            // Format display name: 'Contact Lenses' -> 'Contacts'
+            const displayName = cat.name.toLowerCase().includes('contact') ? 'Contacts' : cat.name;
 
             if (isSale) {
               return (
@@ -57,13 +61,13 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
                   type="button"
                   onMouseEnter={() => onSelectCategory(cat.id)}
                   onClick={() => onSelectCategory(cat.id)}
-                  className={`py-2.5 text-[11px] font-bold uppercase transition-all border-b-2 cursor-pointer ${
+                  className={`py-2.5 text-xs font-bold uppercase transition-all border-b-2 cursor-pointer ${
                     isActive
                       ? 'border-rose-600 text-rose-600'
                       : 'border-transparent text-rose-600 hover:text-rose-700 hover:border-rose-600'
                   }`}
                 >
-                  {cat.name}
+                  {displayName}
                 </button>
               );
             }
@@ -80,7 +84,7 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
                     : 'border-transparent text-walters-charcoal/70 hover:text-walters-navy hover:border-walters-gold'
                 }`}
               >
-                {cat.name}
+                {displayName}
               </button>
             );
           })}

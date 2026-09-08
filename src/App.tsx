@@ -1,9 +1,11 @@
 // src/App.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useCurrency } from './hooks/useCurrency';
 import { useCart } from './hooks/useCart';
+import { apiClient } from './api/client';
+import type { Product } from './types/index';
 
 // Context Providers
 import { AuthProvider } from './context/AuthProvider'; 
@@ -17,6 +19,7 @@ import { TopUtilityBar } from './components/TopUtilityBar';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { HomeFeatureGrid } from './components/home/HomeFeatureGrid';
+import { FeaturedFrames } from './components/home/FeaturedFrames';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -40,6 +43,31 @@ import { OrdersTab } from './pages/admin/OrdersTab';
 import { BookingsTab } from './pages/admin/BookingsTab';
 import { AdminMarketOverview } from './pages/admin/MarketOverview';
 import { AdminSettings } from './pages/admin/AdminSettings';
+
+// Landing Page View
+const HomeView: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchHomeProducts = async () => {
+      try {
+        const res = await apiClient.get<Product[]>('/products/');
+        setProducts(res.data);
+      } catch (error) {
+        console.error('Failed to fetch home products', error);
+      }
+    };
+    fetchHomeProducts();
+  }, []);
+
+  return (
+    <>
+      <Hero />
+      <HomeFeatureGrid />
+      <FeaturedFrames products={products} />
+    </>
+  );
+};
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -80,17 +108,8 @@ const AppContent: React.FC = () => {
       <main className="grow">
         <Routes>
           {/* Storefront Routes */}
-          <Route 
-            path="/" 
-            element={
-              <>
-                <Hero />
-                <HomeFeatureGrid />
-                <Catalog />
-              </>
-            } 
-          />
-          
+          <Route path="/" element={<HomeView />} />
+          <Route path="/catalog" element={<Catalog />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
 

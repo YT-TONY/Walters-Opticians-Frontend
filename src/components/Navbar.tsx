@@ -100,6 +100,15 @@ export const Navbar: React.FC = () => {
     const query = searchQuery.trim();
     if (!query) return;
 
+    // Track user search history locally for personalized recommendations
+    try {
+      const history: string[] = JSON.parse(localStorage.getItem('walters_search_history') || '[]');
+      const updated = [query.toLowerCase(), ...history.filter((item) => item !== query.toLowerCase())].slice(0, 5);
+      localStorage.setItem('walters_search_history', JSON.stringify(updated));
+    } catch {
+      // Storage fallback ignore
+    }
+
     closeMegaMenu();
     setIsMobileMenuOpen(false);
     navigate(`/catalog?search=${encodeURIComponent(query)}`);

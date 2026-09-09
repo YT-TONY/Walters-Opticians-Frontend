@@ -19,6 +19,7 @@ import { TopUtilityBar } from './components/TopUtilityBar';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { HomeFeatureGrid } from './components/home/HomeFeatureGrid';
+import { RecommendedCollections } from './components/home/RecommendedCollections';
 import { FeaturedFrames } from './components/home/FeaturedFrames';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
@@ -65,6 +66,7 @@ const HomeView: React.FC = () => {
       <Hero />
       <HomeFeatureGrid />
       <FeaturedFrames products={products} />
+      <RecommendedCollections />
     </>
   );
 };

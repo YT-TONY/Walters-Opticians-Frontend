@@ -51,7 +51,7 @@ export const RecommendedCollections: React.FC = () => {
   const bottomRightBrand = brands[2];
 
   return (
-    <section className="max-w-7xl mx-auto px-6 lg:px-8 py-16 space-y-12">
+    <section className="max-w-7xl mx-auto px-6 lg:px-8 py-14 space-y-6">
       {/* SECTION HEADER */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
         <Link
@@ -71,10 +71,10 @@ export const RecommendedCollections: React.FC = () => {
       </div>
 
       {/* TOP PORTRAIT 3-CARD GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-150">
         
         {/* LEFT TALL PORTRAIT CARD (Cols 1-7) */}
-        <div className={`lg:col-span-7 h-[500px] lg:h-full relative rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs ${FALLBACK_STYLES[0]} flex flex-col justify-end`}>
+        <div className={`lg:col-span-7 h-125 lg:h-full relative rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs ${FALLBACK_STYLES[0]} flex flex-col justify-end`}>
           {mainBrand.hero_image_url && !failedImages[mainBrand.id] && (
             <img
               src={mainBrand.hero_image_url}
@@ -83,7 +83,7 @@ export const RecommendedCollections: React.FC = () => {
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
 
           <div className="relative z-10 p-8 sm:p-12 flex flex-col justify-end h-full">
             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-walters-gold bg-walters-navy/90 backdrop-blur-md px-3.5 py-1.5 rounded-full w-fit mb-4">
@@ -113,7 +113,7 @@ export const RecommendedCollections: React.FC = () => {
         <div className="lg:col-span-5 flex flex-col gap-6 h-auto lg:h-full">
           
           {/* TOP RIGHT CARD */}
-          <div className={`h-[280px] lg:h-1/2 relative rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs ${FALLBACK_STYLES[1]} flex flex-col justify-end`}>
+          <div className={`h-70 lg:h-1/2 relative rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs ${FALLBACK_STYLES[1]} flex flex-col justify-end`}>
             {topRightBrand.hero_image_url && !failedImages[topRightBrand.id] && (
               <img
                 src={topRightBrand.hero_image_url}
@@ -122,7 +122,7 @@ export const RecommendedCollections: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
             <div className="relative z-10 p-6 sm:p-8 flex flex-col justify-end h-full">
               <span className="text-[10px] font-black uppercase tracking-widest text-walters-gold mb-1">
@@ -142,7 +142,7 @@ export const RecommendedCollections: React.FC = () => {
           </div>
 
           {/* BOTTOM RIGHT CARD */}
-          <div className={`h-[280px] lg:h-1/2 relative rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs ${FALLBACK_STYLES[2]} flex flex-col justify-end`}>
+          <div className={`h-70 lg:h-1/2 relative rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs ${FALLBACK_STYLES[2]} flex flex-col justify-end`}>
             {bottomRightBrand.hero_image_url && !failedImages[bottomRightBrand.id] && (
               <img
                 src={bottomRightBrand.hero_image_url}
@@ -151,7 +151,7 @@ export const RecommendedCollections: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
             <div className="relative z-10 p-6 sm:p-8 flex flex-col justify-end h-full">
               <span className="text-[10px] font-black uppercase tracking-widest text-walters-gold mb-1">
@@ -173,14 +173,14 @@ export const RecommendedCollections: React.FC = () => {
         </div>
       </div>
 
-      {/* 4TH FULL-WIDTH BANNER: TRENDING NOW (STATIC HARDCODED) */}
-      <div className="relative h-[260px] sm:h-[320px] w-full rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs bg-neutral-900 flex flex-col justify-end">
+      {/* 4TH FULL-WIDTH BANNER: TRENDING NOW (EXTENDED HEIGHT & TIGHTENED GAP) */}
+      <div className="relative h-78 sm:h-90 w-full rounded-3xl overflow-hidden group border border-neutral-200/80 shadow-xs bg-neutral-900 flex flex-col justify-end">
         <img
-          src="/IMAGES/HOMEPAGE/LUXURY_BANNER.jpg"
+          src="/IMAGES/HOMEPAGE/TRENDING_BANNER.png"
           alt="Trending Now Optical Frames"
           className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-90"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/50 to-transparent pointer-events-none" />
 
         <div className="relative z-10 p-8 sm:p-12 max-w-xl flex flex-col justify-end h-full">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-walters-gold bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full w-fit mb-3 border border-walters-gold/30">
@@ -188,7 +188,7 @@ export const RecommendedCollections: React.FC = () => {
             <span>High Sales & High Demand</span>
           </span>
 
-          <h3 className="text-white font-serif text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
+          <h3 className="text-white font-serif text-3xl sm:text-5xl font-extrabold tracking-tight mb-3">
             Trending Now
           </h3>
 

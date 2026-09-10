@@ -54,14 +54,6 @@ export const RecommendedCollections: React.FC = () => {
     <section className="max-w-7xl mx-auto px-6 lg:px-8 py-14 space-y-6">
       {/* SECTION HEADER */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
-        <Link
-          to="/catalog?sort=top_sales"
-          className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#EFECE6] hover:bg-walters-navy hover:text-white text-walters-navy text-[11px] font-bold tracking-wider uppercase rounded-full transition-all shadow-2xs group"
-        >
-          <span>See More Best Sellers</span>
-          <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-        </Link>
-
         <h2 className="text-3xl sm:text-4xl font-extrabold text-walters-navy tracking-tight font-serif">
           Most Recommended Collections For You
         </h2>

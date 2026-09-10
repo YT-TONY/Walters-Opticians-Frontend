@@ -21,6 +21,7 @@ import { Hero } from './components/Hero';
 import { HomeFeatureGrid } from './components/home/HomeFeatureGrid';
 import { RecommendedCollections } from './components/home/RecommendedCollections';
 import { FeaturedFrames } from './components/home/FeaturedFrames';
+import { VisitStore } from './components/home/VisitStore';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -67,6 +68,7 @@ const HomeView: React.FC = () => {
       <HomeFeatureGrid />
       <FeaturedFrames products={products} />
       <RecommendedCollections />
+      <VisitStore />
     </>
   );
 };

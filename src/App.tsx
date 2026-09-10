@@ -22,6 +22,7 @@ import { HomeFeatureGrid } from './components/home/HomeFeatureGrid';
 import { RecommendedCollections } from './components/home/RecommendedCollections';
 import { FeaturedFrames } from './components/home/FeaturedFrames';
 import { VisitStore } from './components/home/VisitStore';
+import { Footer } from './components/footer';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -91,7 +92,7 @@ const AppContent: React.FC = () => {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isAuthRoute = ['/login', '/register'].includes(location.pathname);
   
-  // Suppress public store header (utility bar & navbar) on admin and auth pages
+  // Suppress public store header and footer on admin and auth pages
   const hideHeader = isAdminRoute || isAuthRoute;
 
   // Helper redirect target based on user role
@@ -149,6 +150,9 @@ const AppContent: React.FC = () => {
           </Route>
         </Routes>
       </main>
+
+      {/* Global Storefront Footer */}
+      {!hideHeader && <Footer />}
 
       {selectedProduct && (
         <PrescriptionModal

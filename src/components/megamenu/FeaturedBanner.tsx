@@ -42,10 +42,10 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
 }) => {
   const isSunglasses = categorySlug.toLowerCase().includes('sunglass');
 
-  // Sunglasses Layout: 3 Elongated Spotlight Cards with Sharp Edges & Larger Text
+  // Sunglasses Layout: 3 Cards aligned to the right edge of Top Brands
   if (isSunglasses) {
     return (
-      <div className="grid grid-cols-3 gap-4 w-full pt-2">
+      <div className="grid grid-cols-3 gap-5 w-189 pt-2">
         {SUNGLASSES_FEATURE_CARDS.map((card) => (
           <Link
             key={card.id}
@@ -53,20 +53,20 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
             onClick={onItemClick}
             className="group flex flex-col space-y-2"
           >
-            {/* Extended Height & Sharp Borders */}
-            <div className="w-full h-44 rounded-none overflow-hidden relative bg-walters-navy/5 shadow-2xs">
+            {/* Taller Height (h-52) with Rounded Corners */}
+            <div className="w-full h-56 overflow-hidden relative bg-slate-100 shadow-xs">
               <img
                 src={card.image}
                 alt={card.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
-            {/* Increased Text Sizes */}
+            {/* Title & Subtitle */}
             <div>
-              <h5 className="text-sm font-semibold text-walters-navy group-hover:text-walters-gold transition-colors">
+              <h5 className="text-sm font-semibold text-walters-navy group-hover:text-amber-600 transition-colors">
                 {card.title}
               </h5>
-              <p className="text-xs text-walters-slate/80 font-normal leading-snug mt-0.5">
+              <p className="text-xs text-neutral-500 font-normal leading-snug mt-0.5">
                 {card.subtitle}
               </p>
             </div>
@@ -76,9 +76,9 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
     );
   }
 
-  // Optical Glasses Layout: Tall Full-Bleed Portrait Banner Card
+  // Optical Glasses Layout: Tall Portrait Banner Card
   return (
-    <div className="w-64 h-84 shrink-0 relative rounded-none overflow-hidden shadow-2xs group">
+    <div className="w-76 h-84 shrink-0 relative overflow-hidden shadow-2xs group">
       <img
         src={imageUrl}
         alt="Shop Luxury"

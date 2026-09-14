@@ -8,10 +8,8 @@ interface MegaMenuSubCategoryListProps {
   onItemClick?: () => void;
 }
 
-// Added 'sale' to EXCLUDED_SLUGS to prevent double rendering
 const EXCLUDED_SLUGS = ['inserts', 'blue-light-blocking-glasses', 'blue-light', 'sale'];
 
-// Fallback demographic subcategories for Sunglasses if DB list is unpopulated
 const DEFAULT_SUNGLASS_SUBS = [
   { id: 'womens', name: "Women's Sunglasses", slug: 'womens-sunglasses' },
   { id: 'mens', name: "Men's Sunglasses", slug: 'mens-sunglasses' },
@@ -38,19 +36,19 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
     filteredSubcategories.length > 0 ? filteredSubcategories : DEFAULT_SUNGLASS_SUBS;
 
   return (
-    <div className="w-48 shrink-0 pr-4 space-y-3">
-      <h3 className="text-xs font-bold uppercase tracking-widest text-walters-navy">
+    <div className="w-56 shrink-0 pr-4 space-y-3">
+      <h3 className="text-amber-600 font-semibold text-base tracking-wide mb-2.5">
         {activeCategory.name}
       </h3>
 
-      <nav className="flex flex-col space-y-1.5 text-xs font-medium">
+      <nav className="flex flex-col space-y-2 text-sm font-medium">
         {/* Demographic Links */}
         {demographicList.map((sub) => (
           <Link
             key={sub.slug}
             to={`/catalog?category=${categorySlug}&subcategory=${sub.slug}`}
             onClick={onItemClick}
-            className="text-walters-charcoal/80 hover:text-walters-navy hover:translate-x-1 transition-all py-0.5 block"
+            className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
           >
             {sub.name}
           </Link>
@@ -62,28 +60,28 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
             <Link
               to={`/catalog?category=${categorySlug}&filter=new-arrivals`}
               onClick={onItemClick}
-              className="text-walters-charcoal/80 hover:text-walters-navy hover:translate-x-1 transition-all py-0.5 block"
+              className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               New Arrivals
             </Link>
             <Link
               to={`/catalog?category=${categorySlug}&filter=best-sellers`}
               onClick={onItemClick}
-              className="text-walters-charcoal/80 hover:text-walters-navy hover:translate-x-1 transition-all py-0.5 block"
+              className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               Best Sellers
             </Link>
             <Link
               to={`/catalog?category=${categorySlug}&brand=ray-ban-meta`}
               onClick={onItemClick}
-              className="text-walters-charcoal/80 hover:text-walters-navy hover:translate-x-1 transition-all py-0.5 block"
+              className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               Ray-Ban Meta
             </Link>
             <Link
               to={`/catalog?category=${categorySlug}&brand=oakley-meta`}
               onClick={onItemClick}
-              className="text-walters-charcoal/80 hover:text-walters-navy hover:translate-x-1 transition-all py-0.5 block"
+              className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               Oakley Meta
             </Link>
@@ -95,7 +93,7 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
           <Link
             to={`/catalog?category=${categorySlug}&on_sale=true`}
             onClick={onItemClick}
-            className="text-rose-600 font-bold text-xs hover:text-rose-700 hover:translate-x-1 transition-all py-1 block"
+            className="text-rose-600 font-bold text-sm hover:text-rose-700 hover:translate-x-1 transition-all py-1 block"
           >
             Sale
           </Link>

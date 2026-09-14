@@ -56,25 +56,25 @@ export const ShapesAndTypesGrid: React.FC<ShapesAndTypesGridProps> = ({
 
   return (
     <div className="w-115 shrink-0 space-y-5">
-      {/* Popular Shapes Grid - Increased Size */}
+      {/* Popular Shapes Grid - Vector Display */}
       <div>
         <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
           Popular Shapes
         </h4>
-        <div className="grid grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-4 gap-x-3 gap-y-4">
           {activeShapes.map((shape) => (
             <Link
               key={shape.slug}
               to={`/catalog?category=${categorySlug}&shape=${shape.slug}`}
               onClick={onItemClick}
-              className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-neutral-100 hover:border-walters-navy/30 bg-white hover:bg-walters-cream/30 transition-all group shadow-2xs"
+              className="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-neutral-50 transition-all group cursor-pointer"
             >
               <img
                 src={shape.image}
                 alt={shape.name}
-                className="h-9 w-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all"
+                className="h-11 w-auto max-w-[95%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200"
               />
-              <span className="text-xs font-semibold text-neutral-700 group-hover:text-walters-navy mt-1.5">
+              <span className="text-xs font-medium text-neutral-700 group-hover:text-amber-600 mt-1.5 transition-colors">
                 {shape.name}
               </span>
             </Link>
@@ -82,26 +82,26 @@ export const ShapesAndTypesGrid: React.FC<ShapesAndTypesGridProps> = ({
         </div>
       </div>
 
-      {/* Optical Frame Rim Types - Increased Size */}
+      {/* Optical Frame Rim Types - Vector Display */}
       {!isSunglasses && (
         <div>
           <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
             Popular Frame Types
           </h4>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-3 gap-x-3 gap-y-4">
             {GLASSES_TYPES.map((type) => (
               <Link
                 key={type.slug}
                 to={`/catalog?category=${categorySlug}&rim=${type.slug}`}
                 onClick={onItemClick}
-                className="flex flex-col items-center justify-center p-3 rounded-xl border border-neutral-100 hover:border-walters-navy/30 bg-white hover:bg-walters-cream/30 transition-all group shadow-2xs"
+                className="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-neutral-50 transition-all group cursor-pointer"
               >
                 <img
                   src={type.image}
                   alt={type.name}
-                  className="h-9 w-auto object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all"
+                  className="h-11 w-auto max-w-[95%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200"
                 />
-                <span className="text-xs font-semibold text-neutral-700 group-hover:text-walters-navy mt-1.5">
+                <span className="text-xs font-medium text-neutral-700 group-hover:text-amber-600 mt-1.5 transition-colors">
                   {type.name}
                 </span>
               </Link>

@@ -4,12 +4,11 @@ import { Link } from 'react-router-dom';
 import type { Brand } from '../../context/Category';
 import { CategoryContext } from '../../context/CategoryContext';
 
-// Extended Brand interface supporting backend & admin badge metadata
 export interface ExtendedBrand extends Brand {
-  badge_text?: string;  // e.g. "NEW", "SALE", "PROMO", "20% OFF"
-  badge_color?: string; // e.g. "bg-rose-600", "bg-amber-500", "bg-emerald-600"
-  promo_tag?: string;   // Backend field from FastAPI
-  created_at?: string;  // ISO Timestamp from FastAPI
+  badge_text?: string;
+  badge_color?: string;
+  promo_tag?: string;
+  created_at?: string;
 }
 
 interface BrandsGridProps {
@@ -55,7 +54,6 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
   const [activeTab, setActiveTab] = useState<'top' | 'all'>('top');
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   
-  // Capture current timestamp safely in initial state initializer
   const [now] = useState(() => Date.now());
 
   const categoryCtx = useContext(CategoryContext);
@@ -99,7 +97,6 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     );
   }, [brandList, activeType]);
 
-  // Compute dynamic badges using the pure 'now' state
   const processedBrands = useMemo(() => {
     const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -119,7 +116,6 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     });
   }, [filteredBrands, now]);
 
-  // 15 Brands total for the 5x3 Grid
   const topBrands = useMemo(() => {
     const topFiltered = processedBrands.filter((b) => b.is_top_brand || b.is_popular);
     const list = topFiltered.length > 0 ? topFiltered : processedBrands;
@@ -140,32 +136,32 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     }));
   }, [processedBrands]);
 
-  // MINI BRANDS GRID
+  // MINI BRANDS GRID (Aligned with Shapes section grid parameters)
   if (variant === 'mini') {
     return (
-      <div className="w-60 shrink-0">
+      <div className="w-64 shrink-0">
         <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
           Top Brands
         </h4>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-3">
           {MINI_BRANDS.map((brand) => (
             <Link
               key={brand.slug}
               to={`/catalog?category=${categorySlug}&brand=${brand.slug}`}
               onClick={onClose}
-              className="flex items-center justify-center p-3 bg-white border border-neutral-200 rounded-lg hover:border-walters-navy hover:shadow-xs transition-all h-16 group"
+              className="flex items-center justify-center p-3 bg-white border border-neutral-200 rounded-lg hover:border-amber-500 hover:shadow-xs transition-all h-17 group"
             >
               <img
                 src={brand.logo}
                 alt={brand.name}
-                className="max-h-8 max-w-[85%] object-contain opacity-85 group-hover:opacity-100 transition-opacity"
+                className="max-h-8 max-w-[85%] object-contain opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all"
               />
             </Link>
           ))}
           <Link
             to={`/catalog?category=${categorySlug}&view=brands`}
             onClick={onClose}
-            className="flex items-center justify-center p-3 bg-walters-navy text-white hover:bg-neutral-800 transition-all text-xs font-bold tracking-wider uppercase h-16 rounded-lg shadow-2xs"
+            className="flex items-center justify-center p-3 bg-slate-900 text-white hover:bg-slate-800 transition-all text-xs font-bold tracking-wider uppercase h-17 rounded-lg shadow-xs"
           >
             Shop All
           </Link>
@@ -179,13 +175,13 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     return (
       <div className="w-full flex flex-col items-center">
         
-        {/* EXTENDED NAVY PILL SWITCH */}
+        {/* TALLER PILL SWITCH */}
         <div className="flex justify-center w-full mb-6">
-          <div className="inline-flex items-center rounded-full border border-neutral-300 bg-white p-1 shadow-xs w-full max-w-xl">
+          <div className="inline-flex items-center rounded-full border border-neutral-300 bg-white p-1.5 shadow-xs w-full max-w-md">
             <button
               type="button"
               onClick={() => setActiveType('glasses')}
-              className={`flex-1 py-2 text-xs font-bold tracking-wider uppercase rounded-full transition-all cursor-pointer ${
+              className={`flex-1 py-2.5 text-xs font-bold tracking-wider uppercase rounded-full transition-all cursor-pointer ${
                 activeType === 'glasses'
                   ? 'bg-walters-navy text-white shadow-xs'
                   : 'bg-transparent text-neutral-600 hover:text-walters-navy'
@@ -193,11 +189,11 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             >
               Glasses
             </button>
-            <div className="h-4 w-px bg-neutral-300 mx-1" />
+            <div className="h-5 w-px bg-neutral-300 mx-1" />
             <button
               type="button"
               onClick={() => setActiveType('sunglasses')}
-              className={`flex-1 py-2 text-xs font-bold tracking-wider uppercase rounded-full transition-all cursor-pointer ${
+              className={`flex-1 py-2.5 text-xs font-bold tracking-wider uppercase rounded-full transition-all cursor-pointer ${
                 activeType === 'sunglasses'
                   ? 'bg-walters-navy text-white shadow-xs'
                   : 'bg-transparent text-neutral-600 hover:text-walters-navy'
@@ -208,13 +204,13 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
           </div>
         </div>
 
-        {/* FULL-WIDTH SUB-FILTER TABS */}
-        <div className="w-full border-b border-neutral-200 mb-6 flex justify-center">
+        {/* SUB-FILTER TABS LINE */}
+        <div className="w-full max-w-5xl border-b border-neutral-200 mb-6 flex justify-center">
           <div className="flex space-x-16">
             <button
               type="button"
               onClick={() => setActiveTab('top')}
-              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-3 -mb-px ${
+              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
                 activeTab === 'top'
                   ? 'border-walters-navy text-walters-navy'
                   : 'border-transparent text-neutral-400 hover:text-walters-navy'
@@ -225,7 +221,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-3 -mb-px ${
+              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
                 activeTab === 'all'
                   ? 'border-walters-navy text-walters-navy'
                   : 'border-transparent text-neutral-400 hover:text-walters-navy'
@@ -236,8 +232,8 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
           </div>
         </div>
 
-        {/* 5x3 BRAND GRID WITH DIAGONAL CORNER BADGES */}
-        <div className="w-full">
+        {/* BRAND GRID CONTAINER */}
+        <div className="w-full max-w-5xl mx-auto">
           {activeTab === 'top' && (
             <div className="grid grid-cols-5 gap-3.5">
               {topBrands.map((brand) => {
@@ -248,7 +244,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
                     key={brand.slug}
                     to={`/catalog?category=${activeType}&brand=${brand.slug}`}
                     onClick={onClose}
-                    className="relative flex items-center justify-center p-3.5 bg-white border border-neutral-200 rounded-none hover:border-walters-navy hover:shadow-xs transition-all h-24 group overflow-hidden"
+                    className="relative flex items-center justify-center p-4 bg-white border border-neutral-200 rounded-md hover:border-walters-navy hover:shadow-xs transition-all h-28 group overflow-hidden"
                   >
                     {/* Corner Ribbon Badge */}
                     {brand.badge_text && (
@@ -268,7 +264,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
                         src={logoSrc}
                         alt={brand.name}
                         onError={() => handleImageError(brand.logo_url ? brand.slug : `local-${brand.slug}`)}
-                        className="max-h-11 max-w-[85%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                        className="max-h-12 max-w-[85%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                       />
                     ) : (
                       <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider text-center group-hover:scale-105 transition-transform">
@@ -285,16 +281,16 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-6 gap-y-6 max-h-100 overflow-y-auto pr-2 pt-1 no-scrollbar">
               {alphabeticalGrouped.map((group) => (
                 <div key={group.letter} className="space-y-2">
-                  <h5 className="text-xs font-bold text-walters-navy border-b border-neutral-200 pb-1">
+                  <h5 className="text-[20px] font-normal text-walters-navy border-b border-neutral-200 pb-1">
                     {group.letter}
                   </h5>
-                  <ul className="space-y-1.5 text-xs">
+                  <ul className="space-y-1.5 text-[13px]">
                     {group.brands.map((b) => (
                       <li key={b.slug} className="relative">
                         <Link
                           to={`/catalog?category=${activeType}&brand=${b.slug}`}
                           onClick={onClose}
-                          className="text-neutral-700 hover:text-walters-navy transition-colors py-0.5 flex items-center justify-between truncate capitalize font-medium text-xs"
+                          className="text-neutral-700 hover:text-walters-navy transition-colors py-0.5 flex items-center justify-between truncate capitalize font-medium text-[13px]"
                         >
                           <span className="truncate">{b.name}</span>
                           {b.badge_text && (

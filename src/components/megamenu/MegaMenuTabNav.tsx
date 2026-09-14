@@ -43,7 +43,7 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
   }
 
   return (
-    <div className="w-full bg-white border-b border-walters-border/15">
+    <div className="w-full bg-white">
       {/* Container aligned with max-w-7xl mx-auto px-8 */}
       <div className="max-w-7xl mx-auto px-8 flex items-center justify-between h-11">
         <nav className="flex items-center space-x-8 tracking-wider overflow-x-auto no-scrollbar">

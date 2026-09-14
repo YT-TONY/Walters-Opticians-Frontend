@@ -7,6 +7,7 @@ import { ShapesAndTypesGrid } from './ShapesAndTypesGrid';
 import { BrandsGrid } from './BrandsGrid';
 import { FeatureBanner } from './FeaturedBanner';
 import { SaleGrid } from './SaleGrid';
+import { ContactLensesGrid } from './ContactLensesGrid';
 import { BrandsVirtualCategory } from './constants';
 
 interface MegaMenuProps {
@@ -37,11 +38,14 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
 
   const isBrandsTab = activeCategory?.id === BrandsVirtualCategory.id || activeCategory?.slug === 'brands';
   const isSaleTab = activeCategory?.slug.toLowerCase() === 'sale' || activeCategory?.name.toLowerCase() === 'sale';
+  const isContactLensesTab =
+    activeCategory?.slug.toLowerCase().includes('contact') ||
+    activeCategory?.name.toLowerCase().includes('contact');
   const isSunglasses = activeCategory?.slug.toLowerCase().includes('sunglass');
 
   return (
     <div
-      className="absolute top-full left-0 w-full bg-white shadow-2xl z-50 border-b border-neutral-200 animate-in fade-in duration-150"
+      className="absolute top-full left-0 w-full bg-white shadow-2xl z-50 animate-in fade-in duration-150"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -59,6 +63,9 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
         ) : isSaleTab ? (
           /* SALE TAB VIEW: 3 Promotional Banners */
           <SaleGrid onClose={onClose} />
+        ) : isContactLensesTab ? (
+          /* CONTACT LENSES TAB VIEW */
+          <ContactLensesGrid onClose={onClose} />
         ) : (
           /* OPTICAL & SUNGLASSES VIEWS */
           <div className="flex items-start justify-start gap-12">
@@ -68,7 +75,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({
             />
 
             {isSunglasses ? (
-              <div className="flex-1 max-w-2xl flex flex-col space-y-5">
+              <div className="flex-1 flex flex-col space-y-5">
                 <div className="flex items-start gap-10">
                   <ShapesAndTypesGrid
                     categorySlug={activeCategory?.slug || 'sunglasses'}

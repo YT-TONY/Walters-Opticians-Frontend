@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Eye, ShoppingBag, Star, Loader2 } from 'lucide-react';
 import type { Product } from '../types/index';
+import { useFavorite } from '../hooks/useFavorite';
 
 export interface ProductGroup {
   groupKey: string;
@@ -16,32 +17,69 @@ interface ProductCardProps {
   formatPrice: (price: number) => string;
 }
 
-const getColorSwatchStyle = (colorDesc: string): React.CSSProperties => {
+const getColorSwatchStyle = (colorDesc: string, colorCode?: string): React.CSSProperties => {
+  // 1. Direct color_code from backend DB (Hex, CSS gradient, or raw hex code)
+  if (colorCode && colorCode.trim() !== '') {
+    const trimmedCode = colorCode.trim();
+    if (
+      trimmedCode.startsWith('#') ||
+      trimmedCode.startsWith('rgb') ||
+      trimmedCode.startsWith('hsl') ||
+      trimmedCode.startsWith('linear-gradient')
+    ) {
+      return trimmedCode.startsWith('linear-gradient')
+        ? { background: trimmedCode }
+        : { backgroundColor: trimmedCode };
+    }
+    // Standard 3 or 6 digit hex code without '#' prefix
+    if (/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(trimmedCode)) {
+      return { backgroundColor: `#${trimmedCode}` };
+    }
+  }
+
+  // 2. Extract embedded hex code inside description string if available
   const lower = colorDesc.toLowerCase();
-  if (lower.includes('tortoise') || lower.includes('amber')) {
+  const hexMatch = lower.match(/#([0-9a-f]{3,6})/i);
+  if (hexMatch) {
+    return { backgroundColor: hexMatch[0] };
+  }
+
+  // 3. Eyewear & Luxury Pattern Matching Fallback
+  if (lower.includes('tortoise') || lower.includes('havana') || lower.includes('amber')) {
     return { background: 'linear-gradient(135deg, #4a2810 0%, #b45309 50%, #d97706 100%)' };
+  }
+  if (lower.includes('rose gold')) {
+    return { background: 'linear-gradient(135deg, #fb7185 0%, #fecdd3 50%, #e11d48 100%)' };
   }
   if (lower.includes('gold')) {
     return { background: 'linear-gradient(135deg, #d97706 0%, #fef08a 50%, #ca8a04 100%)' };
   }
-  if (lower.includes('cobalt') || lower.includes('blue')) {
+  if (lower.includes('gunmetal') || lower.includes('bronze') || lower.includes('titanium')) {
+    return { background: 'linear-gradient(135deg, #334155 0%, #94a3b8 100%)' };
+  }
+  if (lower.includes('cobalt') || lower.includes('blue') || lower.includes('navy')) {
     return { backgroundColor: '#1e3a8a' };
+  }
+  if (lower.includes('green') || lower.includes('emerald') || lower.includes('olive')) {
+    return { backgroundColor: '#14532d' };
   }
   if (lower.includes('yellow')) {
     return { backgroundColor: '#eab308' };
   }
-  if (lower.includes('black')) {
+  if (lower.includes('black') || lower.includes('dark')) {
     return { backgroundColor: '#18181b' };
   }
-  if (lower.includes('pink') || lower.includes('marble')) {
+  if (lower.includes('pink') || lower.includes('marble') || lower.includes('rose')) {
     return { background: 'linear-gradient(135deg, #f472b6 0%, #fbcfe8 100%)' };
   }
   if (lower.includes('silver') || lower.includes('grey') || lower.includes('gray')) {
     return { backgroundColor: '#94a3b8' };
   }
-  if (lower.includes('clear') || lower.includes('crystal')) {
+  if (lower.includes('clear') || lower.includes('crystal') || lower.includes('transparent')) {
     return { background: 'linear-gradient(135deg, #e2e8f0 0%, #ffffff 100%)' };
   }
+
+  // 4. Default Neutral Fallback
   return { backgroundColor: '#64748b' };
 };
 
@@ -51,10 +89,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   formatPrice,
 }) => {
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorite();
 
   const [prevGroupKey, setPrevGroupKey] = useState<string>(group.groupKey);
   const [activeVariant, setActiveVariant] = useState<Product>(group.defaultProduct);
-  const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
   const [adding, setAdding] = useState<boolean>(false);
 
   if (group.groupKey !== prevGroupKey) {
@@ -62,6 +100,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setActiveVariant(group.defaultProduct);
   }
 
+  const isWishlisted = isFavorite(activeVariant.id);
   const isOutOfStock = activeVariant.stock_quantity <= 0;
 
   // Dynamic Badge Logic
@@ -146,7 +185,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className="group relative flex flex-col cursor-pointer select-none transition-all duration-300"
     >
       {/* 1. Large Rounded Rectangle Image Container */}
-      <div className="relative w-full aspect-square bg-[#F5F4F0] rounded-3xl overflow-hidden flex items-center justify-center p-6 transition-all group-hover:shadow-md">
+      <div className="relative w-full aspect-square bg-[#fffefcf3] rounded-3xl overflow-hidden flex items-center justify-center p-6 transition-all group-hover:shadow-md">
         
         {/* Top-Left Overlay: Dynamic Interactive Pill Badge */}
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
@@ -160,19 +199,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Top-Right Overlay: Quick Actions */}
-        <div className="absolute top-4 right-4 z-10 flex flex-col space-y-2 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
+        <div className="absolute top-4 right-4 z-10 flex flex-col space-y-2.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setIsWishlisted(!isWishlisted);
+              toggleFavorite(activeVariant);
             }}
-            className={`w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md backdrop-blur-xs transition-transform hover:scale-110 cursor-pointer ${
-              isWishlisted ? 'text-rose-500' : 'text-walters-navy/70 hover:text-walters-navy'
+            className={`w-10 h-10 rounded-full bg-white/95 hover:bg-white flex items-center justify-center shadow-md backdrop-blur-xs transition-all hover:scale-110 cursor-pointer ${
+              isWishlisted ? 'text-rose-500' : 'text-walters-navy/80 hover:text-walters-navy'
             }`}
-            title="Wishlist"
+            title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
           >
-            <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+            <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
           </button>
 
           <button
@@ -181,23 +220,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               e.stopPropagation();
               handleCardClick();
             }}
-            className="w-9 h-9 rounded-full bg-white/90 hover:bg-white text-walters-navy/70 hover:text-walters-navy flex items-center justify-center shadow-md backdrop-blur-xs transition-transform hover:scale-110 cursor-pointer"
+            className="w-10 h-10 rounded-full bg-white/95 hover:bg-white text-walters-navy/80 hover:text-walters-navy flex items-center justify-center shadow-md backdrop-blur-xs transition-all hover:scale-110 cursor-pointer"
             title="Quick View"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-5 h-5" />
           </button>
 
           <button
             type="button"
             onClick={handleQuickAdd}
             disabled={isOutOfStock || adding}
-            className="w-9 h-9 rounded-full bg-white/90 hover:bg-white text-walters-navy/70 hover:text-walters-navy flex items-center justify-center shadow-md backdrop-blur-xs transition-transform hover:scale-110 disabled:opacity-40 cursor-pointer"
+            className="w-10 h-10 rounded-full bg-white/95 hover:bg-white text-walters-navy/80 hover:text-walters-navy flex items-center justify-center shadow-md backdrop-blur-xs transition-all hover:scale-110 disabled:opacity-40 cursor-pointer"
             title="Add to Bag"
           >
             {adding ? (
-              <Loader2 className="w-4 h-4 animate-spin text-walters-navy" />
+              <Loader2 className="w-5 h-5 animate-spin text-walters-navy" />
             ) : (
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-5 h-5" />
             )}
           </button>
         </div>
@@ -262,7 +301,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                       ? 'ring-2 ring-walters-navy ring-offset-1 border-white scale-110'
                       : 'border-black/20 opacity-70 hover:opacity-100 hover:scale-105'
                   }`}
-                  style={getColorSwatchStyle(variant.color_description)}
+                  style={getColorSwatchStyle(variant.color_description, variant.color_code)}
                 />
               );
             })}

@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useCurrency } from './hooks/useCurrency';
@@ -49,6 +49,12 @@ import { BookingsTab } from './pages/admin/BookingsTab';
 import { AdminMarketOverview } from './pages/admin/MarketOverview';
 import { AdminSettings } from './pages/admin/AdminSettings';
 
+// Helper function to check if a product is a contact lens
+const isContactLens = (product: Product) => {
+  const cat = (product.category || '').toLowerCase().trim();
+  return cat === 'contact_lenses' || cat === 'contact-lenses' || cat === 'contacts';
+};
+
 // Public Landing Page View
 const HomeView: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -65,11 +71,16 @@ const HomeView: React.FC = () => {
     fetchHomeProducts();
   }, []);
 
+  // Filter out contact lenses so Home Page Featured Section only displays frames
+  const frameProducts = useMemo(() => {
+    return products.filter((p) => !isContactLens(p));
+  }, [products]);
+
   return (
     <>
       <Hero />
       <HomeFeatureGrid />
-      <FeaturedFrames products={products} />
+      <FeaturedFrames products={frameProducts} />
       <RecommendedCollections />
       <VisitStore />
     </>

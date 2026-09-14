@@ -56,10 +56,8 @@ const GENERIC_OPTICAL_TYPES = [
   'Polarized Sunglasses'
 ];
 
-// Strip non-alphanumeric characters for normalized comparison ("ray ban" == "rayban" == "Ray-Ban")
 const normalizeStr = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-// Levenshtein Distance Matrix Calculation
 const getLevenshteinDistance = (a: string, b: string): number => {
   if (a === b) return 0;
   if (!a.length) return b.length;
@@ -123,7 +121,6 @@ export const Catalog: React.FC = () => {
   const subcategoryParam = searchParams.get('subcategory') || '';
   const brandParam = searchParams.get('brand') || '';
 
-  // Track previous search query to reset forceExactSearch during render (replaces useEffect)
   const [prevSearchQuery, setPrevSearchQuery] = useState(searchQueryParam);
   if (searchQueryParam !== prevSearchQuery) {
     setPrevSearchQuery(searchQueryParam);
@@ -149,7 +146,6 @@ export const Catalog: React.FC = () => {
     fetchProducts();
   }, []);
 
-  // POOL OF ALL AVAILABLE TARGET TERMS FOR FUZZY MATCHING
   const searchTermsIndex = useMemo(() => {
     const termSet = new Set<string>();
 
@@ -165,14 +161,23 @@ export const Catalog: React.FC = () => {
     return Array.from(termSet);
   }, [products]);
 
-  // CLIENT-SIDE FILTERING WITH AUTOMATIC FUZZY FALLBACK
   const { displayProducts, fuzzyCorrection } = useMemo(() => {
     if (!products.length) return { displayProducts: [], fuzzyCorrection: null };
 
     const filterByTerm = (searchTerm: string) => {
       const queryClean = normalizeStr(searchTerm);
+      const isContactCategoryTarget = normalizeStr(categoryParam).includes('contact');
 
       return products.filter((p) => {
+        const prodCatClean = normalizeStr(p.category || '');
+        const isProductContactLens = prodCatClean === 'contactlenses' || prodCatClean === 'contacts';
+
+        // ISOLATION GUARD:
+        // Exclude contact lenses unless the user explicitly requested contact lenses category
+        if (!isContactCategoryTarget && isProductContactLens) {
+          return false;
+        }
+
         // 1. Search Query Match
         if (queryClean !== '') {
           const matchesName = normalizeStr(p.name || '').includes(queryClean);
@@ -188,9 +193,8 @@ export const Catalog: React.FC = () => {
 
         // 2. Category Match
         if (categoryParam) {
-          const catClean = normalizeStr(p.category || '');
           const paramClean = normalizeStr(categoryParam);
-          if (catClean !== paramClean) return false;
+          if (prodCatClean !== paramClean) return false;
         }
 
         // 3. Subcategory Match
@@ -212,14 +216,13 @@ export const Catalog: React.FC = () => {
       });
     };
 
-    // First attempt exact filtering
     const exactMatches = filterByTerm(searchQueryParam);
 
     if (exactMatches.length > 0 || !searchQueryParam.trim() || forceExactSearch) {
       return { displayProducts: exactMatches, fuzzyCorrection: null };
     }
 
-    // Exact search yielded 0 results: Run Fuzzy Matching
+    // Fuzzy Search Fallback
     const cleanQuery = normalizeStr(searchQueryParam);
     const queryTokens = searchQueryParam.toLowerCase().trim().split(/\s+/);
     let bestCandidate: string | null = null;
@@ -297,17 +300,24 @@ export const Catalog: React.FC = () => {
   };
 
   const hasActiveFilters = Boolean(searchQueryParam || categoryParam || subcategoryParam || brandParam);
+  const isContactCategory = categoryParam.toLowerCase().includes('contact');
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       {/* CATALOG TITLE & ACTIVE FILTER BADGES */}
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-bold text-walters-navy">
-          {searchQueryParam ? `Search Results for "${searchQueryParam}"` : 'Optical Frames Catalog'}
+          {searchQueryParam 
+            ? `Search Results for "${searchQueryParam}"` 
+            : isContactCategory 
+            ? 'Contact Lenses Catalog' 
+            : 'Optical Frames Catalog'}
         </h1>
         
         <p className="text-sm text-walters-slate/80 mt-1">
-          Select a frame and add your custom prescription, or buy them frame-only.
+          {isContactCategory 
+            ? 'Browse daily, monthly, toric, and multifocal contact lens solutions.' 
+            : 'Select a frame and add your custom prescription, or buy them frame-only.'}
         </p>
 
         {/* ACTIVE FILTER TAG STRIP */}
@@ -393,7 +403,7 @@ export const Catalog: React.FC = () => {
       ) : productGroups.length === 0 ? (
         <div className="text-center py-20 bg-neutral-50 rounded-3xl border border-dashed border-neutral-200">
           <Search className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-          <h3 className="font-serif text-lg font-bold text-walters-navy">No frames match your search</h3>
+          <h3 className="font-serif text-lg font-bold text-walters-navy">No products match your search</h3>
           <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
             Try checking for spelling errors, adjusting your filter parameters, or browsing all collections.
           </p>

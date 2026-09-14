@@ -1,6 +1,12 @@
 // src/context/CartProvider.tsx
 import React, { useState, useEffect, type ReactNode } from 'react';
-import type { Product, CartItem, PrescriptionData, PurchaseType } from '../types/index';
+import type { 
+  Product, 
+  CartItem, 
+  PurchaseType, 
+  GlassesPrescriptionData, 
+  ContactLensPrescriptionData 
+} from '../types/index';
 import { CartContext } from './CartContext';
 import { CartDrawer } from '../components/CartDrawer';
 import { CartItemConfigDrawer } from '../components/EditStateDrawer';
@@ -125,7 +131,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.success('Updated item specifications in basket!');
   };
 
-  // Defaults isFromCard to true so Quick Add flags item as pending details
   const handleAddStandard = (product: Product, isFromCard = true, targetIndex?: number) => {
     let exceedsStock = false;
 
@@ -220,6 +225,75 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const handleAddContactLenses = (
+    product: Product,
+    contactLensPrescription: ContactLensPrescriptionData,
+    targetIndex?: number
+  ) => {
+    const leftQty = contactLensPrescription.leftEye?.boxes_quantity || 0;
+    const rightQty = contactLensPrescription.rightEye?.boxes_quantity || 0;
+    const totalBoxes = leftQty + rightQty > 0 ? leftQty + rightQty : 1;
+
+    let exceedsStock = false;
+
+    setCartItems((prev) => {
+      if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < prev.length) {
+        return prev.map((item, idx) =>
+          idx === targetIndex
+            ? {
+                ...item,
+                product,
+                quantity: totalBoxes,
+                purchaseType: 'contact_lenses',
+                contactLensPrescription,
+                isPendingConfig: false,
+              }
+            : item
+        );
+      }
+
+      const existingIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.purchaseType === 'contact_lenses'
+      );
+
+      if (existingIdx !== -1) {
+        const newQty = prev[existingIdx].quantity + totalBoxes;
+        if (newQty > product.stock_quantity) {
+          exceedsStock = true;
+          return prev;
+        }
+        return prev.map((item, idx) =>
+          idx === existingIdx
+            ? {
+                ...item,
+                quantity: newQty,
+                contactLensPrescription,
+                isPendingConfig: false,
+              }
+            : item
+        );
+      }
+
+      return [
+        ...prev,
+        {
+          product,
+          quantity: totalBoxes,
+          purchaseType: 'contact_lenses',
+          contactLensPrescription,
+          isPendingConfig: false,
+        },
+      ];
+    });
+
+    if (exceedsStock) {
+      toast.warning(`Cannot add more. Maximum available stock (${product.stock_quantity}) reached.`);
+    } else {
+      toast.success(`${product.name} (Contact Lenses) added to bag!`);
+      setIsDrawerOpen(true);
+    }
+  };
+
   const handleSelectPrescription = (product: Product, editIndex?: number) => {
     setSelectedProduct(product);
     if (typeof editIndex === 'number') {
@@ -230,7 +304,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsModalOpen(true);
   };
 
-  const handleConfirmPrescription = (prescription: PrescriptionData) => {
+  const handleConfirmPrescription = (prescription: GlassesPrescriptionData) => {
     if (!selectedProduct) return;
 
     setCartItems((prev) => {
@@ -348,6 +422,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         handleUpdateConfiguredItem,
         handleAddStandard,
         handleAddFrameOnly,
+        handleAddContactLenses,
         handleSelectPrescription,
         handleConfirmPrescription,
         handleCloseModal,

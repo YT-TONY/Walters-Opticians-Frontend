@@ -1,6 +1,12 @@
 // src/context/CartContext.ts
 import { createContext } from 'react';
-import type { Product, CartItem, PrescriptionData, PurchaseType } from '../types/index';
+import type { 
+  Product, 
+  CartItem, 
+  GlassesPrescriptionData, 
+  ContactLensPrescriptionData, 
+  PurchaseType 
+} from '../types/index';
 
 export interface CartContextType {
   cartItems: CartItem[];
@@ -20,8 +26,9 @@ export interface CartContextType {
 
   handleAddStandard: (product: Product, isFromCard?: boolean, targetIndex?: number) => void;
   handleAddFrameOnly: (product: Product, isFromCard?: boolean, targetIndex?: number) => void;
+  handleAddContactLenses: (product: Product, contactLensPrescription: ContactLensPrescriptionData, targetIndex?: number) => void;
   handleSelectPrescription: (product: Product, editIndex?: number) => void;
-  handleConfirmPrescription: (prescription: PrescriptionData) => void;
+  handleConfirmPrescription: (prescription: GlassesPrescriptionData) => void;
   handleCloseModal: () => void;
   handleClearCart: () => void;
   handleRemoveItem: (index: number) => void;

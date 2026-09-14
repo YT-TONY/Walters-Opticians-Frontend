@@ -1,4 +1,7 @@
-//src/types/index.ts
+export type ProductCategory = 'optical_frames' | 'sunglasses' | 'contact_lenses' | 'lens_care';
+export type ReplacementFrequency = 'daily' | 'bi_weekly' | 'monthly' | 'ortho_k';
+export type LensDesign = 'spherical' | 'toric' | 'multifocal' | 'colored';
+
 export interface User {
   id: string;
   email: string;
@@ -11,15 +14,28 @@ export interface AuthResponse {
   token_type: string;
 }
 
+export interface ContactLensProductDetail {
+  id: number;
+  replacement_frequency: ReplacementFrequency;
+  lens_design: LensDesign;
+  pack_size: number;
+  water_content?: number;
+  material_type?: string;
+  base_curve_options: string; // e.g. "8.4, 8.8"
+  diameter_options: string;   // e.g. "14.0, 14.2"
+  min_power: number;
+  max_power: number;
+}
+
 export interface Product {
   id: number;
+  category?: ProductCategory;
   model_code?: string;
   name: string;
   brand: string;
   shape: string;
   color_description: string;
   color_code?: string;
-  category?: string;
   description?: string;
   gender?: string;
   frame_material?: string;
@@ -44,9 +60,28 @@ export interface Product {
   image_url?: string;
   gallery?: string[];
   images?: string[];
+  contact_lens_detail?: ContactLensProductDetail;
 }
 
-export interface PrescriptionData {
+export interface EyeConfig {
+  sph: number;
+  cyl?: number;
+  axis?: number;
+  add_power?: string;
+  bc: number;
+  dia: number;
+  boxes_quantity: number;
+}
+
+export interface ContactLensPrescriptionData {
+  leftEye?: EyeConfig;
+  rightEye?: EyeConfig;
+  prescriptionFileUrl?: string;
+  expiryDate?: string;
+  opticianName?: string;
+}
+
+export interface GlassesPrescriptionData {
   odSphere: number;
   odCyl: number;
   odAxis: number;
@@ -59,16 +94,16 @@ export interface PrescriptionData {
   uploadedFileUrl?: string;
 }
 
-export type PurchaseType = 'standard' | 'frames_only' | 'prescription';
+export type PurchaseType = 'standard' | 'frames_only' | 'prescription' | 'contact_lenses';
 
 export interface CartItem {
   product: Product;
   quantity: number;
   purchaseType: PurchaseType;
-  prescription?: PrescriptionData;
+  prescription?: GlassesPrescriptionData;
+  contactLensPrescription?: ContactLensPrescriptionData;
   isPendingConfig?: boolean;
 }
-
 
 export interface FavoriteItem {
   id: number;

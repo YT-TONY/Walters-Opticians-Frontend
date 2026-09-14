@@ -1,11 +1,15 @@
 // src/pages/Products.tsx
 import React, { useEffect, useState, useMemo } from 'react';
-import type { Product, PrescriptionData } from '../types';
+import type { Product, GlassesPrescriptionData } from '../types';
 import { apiClient } from '../api/client';
 import { ProductCard, type ProductGroup } from '../components/ProductCard';
 
 interface ProductsProps {
-  onAddToCart: (product: Product, type: 'frames_only' | 'prescription', rx?: PrescriptionData) => void;
+  onAddToCart: (
+    product: Product, 
+    type: 'frames_only' | 'prescription' | 'standard', 
+    rx?: GlassesPrescriptionData
+  ) => void;
 }
 
 // Groups individual colorway products into single card model groups
@@ -38,12 +42,17 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
   useEffect(() => {
     apiClient
       .get<Product[]>('/products')
-      .then((res) => setProducts(res.data))
+      .then((res) => {
+        // Filter catalog to optical frames and sunglasses for this page
+        const frames = res.data.filter((p) => !p.category || p.category === 'optical_frames' || p.category === 'sunglasses');
+        setProducts(frames.length > 0 ? frames : res.data);
+      })
       .catch(() => {
         // Fallback demo data with model_code groupings
         setProducts([
           {
             id: 1,
+            category: 'optical_frames',
             model_code: 'VAL-MARLOWE',
             name: 'Marlowe',
             brand: 'Walters Atelier',
@@ -56,6 +65,7 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
           },
           {
             id: 2,
+            category: 'optical_frames',
             model_code: 'VAL-MARLOWE',
             name: 'Marlowe',
             brand: 'Walters Atelier',
@@ -68,6 +78,7 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
           },
           {
             id: 3,
+            category: 'optical_frames',
             model_code: 'WAL-KENSINGTON',
             name: 'Kensington',
             brand: 'Walters Classic',
@@ -143,10 +154,13 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
               group={group}
               formatPrice={(price) => `£${price.toFixed(2)}`}
               onAddToCart={(product, option) => {
-                if (option === 'Just Frames' || option === 'Standard') {
+                const optLower = option.toLowerCase();
+                if (optLower === 'just frames' || optLower === 'frames_only') {
                   onAddToCart(product, 'frames_only');
-                } else if (option === 'Prescription') {
+                } else if (optLower === 'prescription') {
                   onAddToCart(product, 'prescription');
+                } else {
+                  onAddToCart(product, 'standard');
                 }
               }}
             />

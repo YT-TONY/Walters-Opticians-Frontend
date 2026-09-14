@@ -63,8 +63,10 @@ export const Cart: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-walters-cream py-10 px-4 sm:px-6 lg:px-8 font-sans text-walters-charcoal antialiased">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-walters-cream py-10 font-sans text-walters-charcoal antialiased">
+      
+      {/* CONSTRAINED MAIN CART CONTENT */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 mb-16">
         
         {/* Header */}
         <div>
@@ -447,13 +449,13 @@ export const Cart: React.FC = () => {
           </div>
         )}
 
-        {/* CONTINUED SHOPPING SUGGESTIONS BAR */}
-        <ProductSuggestionsBar
-          contextPage="cart"
-          cartProducts={cartItems.map((item) => item.product)}
-        />
-
       </div>
+
+      <ProductSuggestionsBar
+        contextPage="cart"
+        cartProducts={cartItems.map((item) => item.product)}
+      />
+
     </div>
   );
 };

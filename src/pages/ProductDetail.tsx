@@ -161,8 +161,10 @@ export const ProductDetail: React.FC = () => {
   const lensHeight = product.lens_height ?? 38.0;
 
   return (
-    <div className="min-h-screen bg-walters-cream/30 py-10 px-4 sm:px-8 lg:px-16">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-walters-cream/30 py-10 font-sans text-walters-charcoal antialiased">
+      
+      {/* CONSTRAINED PRODUCT DETAILS CONTENT */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 mb-16">
         <Link 
           to="/" 
           className="inline-flex items-center space-x-2 text-xs font-light text-walters-charcoal/60 hover:text-walters-navy mb-8 transition-colors"
@@ -480,14 +482,12 @@ export const ProductDetail: React.FC = () => {
           </div>
 
         </div>
-
-        {/* PERSONALIZED PRODUCT SUGGESTIONS CAROUSEL */}
-        <ProductSuggestionsBar
-          contextPage="product"
-          currentProduct={product}
-        />
-
       </div>
+
+      <ProductSuggestionsBar
+        contextPage="product"
+        currentProduct={product}
+      />
 
       {/* TWO-TAB SIZE CHART & GUIDE MODAL */}
       {showSizeGuide && (
@@ -650,6 +650,7 @@ export const ProductDetail: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

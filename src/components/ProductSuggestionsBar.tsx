@@ -46,18 +46,21 @@ export const ProductSuggestionsBar: React.FC<ProductSuggestionsBarProps> = ({
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+
   const sectionRef = useRef<HTMLElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { handleAddStandard, handleAddFrameOnly, handleSelectPrescription } = useCart();
   const { formatPrice } = useCurrency();
 
-  // Dynamic Scroll Fade-In / Fade-Out Observer
+  // Scroll entry animation observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsVisible(entry.isIntersecting);
       },
-      { threshold: 0.15 }
+      { threshold: 0.1 }
     );
 
     if (sectionRef.current) {
@@ -67,6 +70,7 @@ export const ProductSuggestionsBar: React.FC<ProductSuggestionsBarProps> = ({
     return () => observer.disconnect();
   }, []);
 
+  // Fetch catalog products
   useEffect(() => {
     let isMounted = true;
     const fetchCatalog = async () => {
@@ -89,6 +93,7 @@ export const ProductSuggestionsBar: React.FC<ProductSuggestionsBarProps> = ({
     };
   }, []);
 
+  // Recommendation engine scoring
   const suggestedGroups = useMemo(() => {
     if (!allProducts.length) return [];
 
@@ -130,10 +135,29 @@ export const ProductSuggestionsBar: React.FC<ProductSuggestionsBarProps> = ({
       });
 
     scoredProducts.sort((a, b) => b.score - a.score);
-
     const resultList = scoredProducts.map((sp) => sp.product);
     return groupProductsByModel(resultList).slice(0, 10);
   }, [allProducts, contextPage, currentProduct, cartProducts, wishlistProducts]);
+
+  // 10-Second Auto-Scroll Interval (Pauses when user hovers over cards)
+  useEffect(() => {
+    if (isHovered || loading || suggestedGroups.length === 0) return;
+
+    const interval = setInterval(() => {
+      if (scrollContainerRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+        const step = 310;
+
+        if (scrollLeft + clientWidth >= scrollWidth - 15) {
+          scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          scrollContainerRef.current.scrollBy({ left: step, behavior: 'smooth' });
+        }
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isHovered, loading, suggestedGroups]);
 
   const handleAddToCart = (product: Product, option: string) => {
     switch (option.toLowerCase()) {
@@ -160,7 +184,7 @@ export const ProductSuggestionsBar: React.FC<ProductSuggestionsBarProps> = ({
         return 'Recommended For You';
       case 'product':
       default:
-        return 'You May Also Like';
+        return 'Similar Styles';
     }
   }, [contextPage, title]);
 
@@ -169,57 +193,58 @@ export const ProductSuggestionsBar: React.FC<ProductSuggestionsBarProps> = ({
   return (
     <section
       ref={sectionRef}
-      className={`w-full py-12 transition-all duration-700 ease-out ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      className={`w-[80vw] mx-auto py-12 overflow-hidden transition-all duration-1000 ease-out ${
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
       }`}
     >
-      <div className="w-full px-6 sm:px-10 lg:px-16 xl:px-20">
-        
-        {/* Simple Header */}
-        <div className="mb-6">
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-walters-navy tracking-tight">
-            {defaultTitle}
-          </h2>
-        </div>
+      {/* Centered Title Header */}
+      <div className="text-center mb-8">
+        <h2 className="font-serif text-2xl sm:text-3xl font-bold text-walters-navy tracking-tight">
+          {defaultTitle}
+        </h2>
+      </div>
 
-        {/* Full-Width Scrollable Row with Soft Edge Mask Fade */}
-        {loading ? (
-          <div className="flex gap-6 overflow-hidden py-2">
-            {[1, 2, 3, 4, 5].map((n) => (
+      {/* 80% Viewport Bounded Carousel Container */}
+      {loading ? (
+        <div className="w-full flex gap-6 overflow-hidden py-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <div
+              key={n}
+              className="min-w-70 max-w-70 h-84 bg-neutral-100/70 rounded-3xl animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          className="relative w-full overflow-hidden"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-6 overflow-x-auto py-4 px-2 scrollbar-none snap-x snap-mandatory scroll-smooth"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              maskImage: 'linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%)',
+            }}
+          >
+            {suggestedGroups.map((group) => (
               <div
-                key={n}
-                className="min-w-67.5 max-w-67.5 h-80 bg-neutral-100/80 rounded-3xl animate-pulse"
-              />
+                key={group.groupKey}
+                className="min-w-65 sm:min-w-71.25 max-w-71.25 snap-start shrink-0 transition-transform duration-300 hover:-translate-y-1"
+              >
+                <ProductCard
+                  group={group}
+                  onAddToCart={handleAddToCart}
+                  formatPrice={formatPrice}
+                />
+              </div>
             ))}
           </div>
-        ) : (
-          <div className="relative w-full overflow-hidden">
-            <div
-              className="flex gap-6 overflow-x-auto py-3 scrollbar-none snap-x snap-mandatory scroll-smooth"
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                maskImage: 'linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 2%, black 98%, transparent 100%)',
-              }}
-            >
-              {suggestedGroups.map((group) => (
-                <div
-                  key={group.groupKey}
-                  className="min-w-65 sm:min-w-70 max-w-70 snap-start shrink-0 transition-transform duration-300 hover:-translate-y-1"
-                >
-                  <ProductCard
-                    group={group}
-                    onAddToCart={handleAddToCart}
-                    formatPrice={formatPrice}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </section>
   );
 };

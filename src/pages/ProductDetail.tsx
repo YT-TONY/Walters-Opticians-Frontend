@@ -18,6 +18,7 @@ import axios from 'axios';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCart } from '../hooks/useCart';
 import type { Product } from '../types/index';
+import { ProductSuggestionsBar } from '../components/ProductSuggestionsBar';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -479,6 +480,13 @@ export const ProductDetail: React.FC = () => {
           </div>
 
         </div>
+
+        {/* PERSONALIZED PRODUCT SUGGESTIONS CAROUSEL */}
+        <ProductSuggestionsBar
+          contextPage="product"
+          currentProduct={product}
+        />
+
       </div>
 
       {/* TWO-TAB SIZE CHART & GUIDE MODAL */}

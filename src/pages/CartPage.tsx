@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Flame
 } from 'lucide-react';
+import { ProductSuggestionsBar } from '../components/ProductSuggestionsBar';
 
 export const Cart: React.FC = () => {
   const navigate = useNavigate();
@@ -63,12 +64,14 @@ export const Cart: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-walters-cream py-10 px-4 sm:px-6 lg:px-8 font-sans text-walters-charcoal antialiased">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto space-y-10">
         
         {/* Header */}
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-walters-navy mb-6">
-          Your Basket <span className="text-base font-normal text-walters-slate tabular-nums">({cartItems.length} items)</span>
-        </h1>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-walters-navy mb-1">
+            Your Basket <span className="text-base font-normal text-walters-slate tabular-nums">({cartItems.length} items)</span>
+          </h1>
+        </div>
 
         {cartItems.length === 0 && savedItems.length === 0 ? (
           <div className="bg-white border border-walters-border rounded-2xl p-12 text-center space-y-4">
@@ -443,6 +446,12 @@ export const Cart: React.FC = () => {
 
           </div>
         )}
+
+        {/* CONTINUED SHOPPING SUGGESTIONS BAR */}
+        <ProductSuggestionsBar
+          contextPage="cart"
+          cartProducts={cartItems.map((item) => item.product)}
+        />
 
       </div>
     </div>

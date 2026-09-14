@@ -7,6 +7,7 @@ import { ProductCard, type ProductGroup } from '../components/ProductCard';
 import { useCart } from '../hooks/useCart';
 import { useCurrency } from '../hooks/useCurrency';
 import type { Product } from '../types';
+import { ProductSuggestionsBar } from '../components/ProductSuggestionsBar';
 
 const groupProductsByModel = (products: Product[]): ProductGroup[] => {
   const groupMap = new Map<string, Product[]>();
@@ -70,9 +71,9 @@ export const Favorites: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 min-h-[70vh]">
+    <div className="max-w-7xl mx-auto px-6 py-10 min-h-[70vh] space-y-12">
       {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-neutral-200/80">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-neutral-200/80">
         <div>
           <button
             type="button"
@@ -136,6 +137,12 @@ export const Favorites: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* RECOMMENDED BASED ON SAVED ITEMS */}
+      <ProductSuggestionsBar
+        contextPage="wishlist"
+        wishlistProducts={favorites}
+      />
     </div>
   );
 };

@@ -49,7 +49,7 @@ import { BookingsTab } from './pages/admin/BookingsTab';
 import { AdminMarketOverview } from './pages/admin/MarketOverview';
 import { AdminSettings } from './pages/admin/AdminSettings';
 
-// Landing Page View
+// Public Landing Page View
 const HomeView: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -97,7 +97,7 @@ const AppContent: React.FC = () => {
   // Suppress public store header and footer on admin and auth pages
   const hideHeader = isAdminRoute || isAuthRoute;
 
-  // Helper redirect target based on user role
+  // Helper redirect target for logged-in users attempting to access /login or /register
   const authenticatedRedirect = isAdmin ? "/admin/dashboard" : "/";
 
   return (
@@ -114,13 +114,14 @@ const AppContent: React.FC = () => {
 
       <main className="grow">
         <Routes>
-          {/* Storefront Routes */}
+          {/* Default Public Storefront Routes */}
           <Route path="/" element={<HomeView />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/cart" element={<Cart />} />
 
+          {/* Authentication Routes (Redirect if already logged in) */}
           <Route 
             path="/login" 
             element={isAuthenticated ? <Navigate to={authenticatedRedirect} replace /> : <Login />} 
@@ -130,11 +131,12 @@ const AppContent: React.FC = () => {
             element={isAuthenticated ? <Navigate to={authenticatedRedirect} replace /> : <Register />} 
           />
           
+          {/* Checkout & User Account Routes */}
           <Route path="/checkout" element={<Checkout cartItems={cartItems} onClearCart={handleClearCart} />} />
           <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-          <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" replace />} />
 
-          {/* Admin Redesign Nested Routes */}
+          {/* Admin Portal Protected Routes */}
           <Route 
             path="/admin" 
             element={
@@ -151,6 +153,9 @@ const AppContent: React.FC = () => {
             <Route path="analytics" element={<AdminMarketOverview />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
+
+          {/* Fallback Route: Any unmatched path redirects to Home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 

@@ -68,3 +68,12 @@ export interface CartItem {
   prescription?: PrescriptionData;
   isPendingConfig?: boolean;
 }
+
+
+export interface FavoriteItem {
+  id: number;
+  product_id: number;
+  user_id: number;
+  created_at: string;
+  product: Product;
+}

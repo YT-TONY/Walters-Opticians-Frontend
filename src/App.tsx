@@ -9,6 +9,7 @@ import type { Product } from './types/index';
 
 // Context Providers
 import { AuthProvider } from './context/AuthProvider'; 
+import { FavoriteProvider } from './context/FavoriteProvider';
 import { CurrencyProvider } from './context/CurrencyProvider';
 import { CategoryProvider } from './context/CategoryProvider';
 import { CartProvider } from './context/CartProvider';
@@ -22,7 +23,7 @@ import { HomeFeatureGrid } from './components/home/HomeFeatureGrid';
 import { RecommendedCollections } from './components/home/RecommendedCollections';
 import { FeaturedFrames } from './components/home/FeaturedFrames';
 import { VisitStore } from './components/home/VisitStore';
-import { Footer } from './components/footer';
+import { Footer } from './components/Footer';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -31,6 +32,7 @@ import { Toaster } from 'sonner';
 // Customer Pages
 import { Catalog } from './pages/Catalog';
 import { ProductDetail } from './pages/ProductDetail';
+import { Favorites } from './pages/Favorites';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Cart } from './pages/CartPage';
@@ -116,6 +118,7 @@ const AppContent: React.FC = () => {
           <Route path="/" element={<HomeView />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/cart" element={<Cart />} />
 
           <Route 
@@ -174,15 +177,17 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <CurrencyProvider>
-          <CategoryProvider>
-            <CartProvider>
-              <OrderProvider>
-                <AppContent />
-              </OrderProvider>
-            </CartProvider>
-          </CategoryProvider>
-        </CurrencyProvider>
+        <FavoriteProvider>
+          <CurrencyProvider>
+            <CategoryProvider>
+              <CartProvider>
+                <OrderProvider>
+                  <AppContent />
+                </OrderProvider>
+              </CartProvider>
+            </CategoryProvider>
+          </CurrencyProvider>
+        </FavoriteProvider>
       </AuthProvider>
     </BrowserRouter>
   );

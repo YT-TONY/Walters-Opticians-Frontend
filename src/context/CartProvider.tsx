@@ -16,6 +16,60 @@ import { productsApi } from '../api/products';
 import { useCurrency } from '../hooks/useCurrency';
 import { toast } from 'sonner';
 
+// Helper to check if two prescription objects match
+const arePrescriptionsEqual = (p1?: GlassesPrescriptionData, p2?: GlassesPrescriptionData): boolean => {
+  if (!p1 && !p2) return true;
+  if (!p1 || !p2) return false;
+  return (
+    p1.odSphere === p2.odSphere &&
+    p1.odCyl === p2.odCyl &&
+    p1.odAxis === p2.odAxis &&
+    p1.osSphere === p2.osSphere &&
+    p1.osCyl === p2.osCyl &&
+    p1.osAxis === p2.osAxis &&
+    p1.pd === p2.pd &&
+    p1.odAdd === p2.odAdd &&
+    p1.osAdd === p2.osAdd &&
+    p1.uploadedFileUrl === p2.uploadedFileUrl
+  );
+};
+
+// Helper to merge duplicate fully-configured cart items
+const consolidateCart = (items: CartItem[]): CartItem[] => {
+  const result: CartItem[] = [];
+
+  for (const item of items) {
+    // Unfinished/pending items remain separate until configured
+    if (item.isPendingConfig) {
+      result.push({ ...item });
+      continue;
+    }
+
+    // Look for an existing completed item with identical specs
+    const matchIdx = result.findIndex(
+      (r) =>
+        !r.isPendingConfig &&
+        String(r.product.id) === String(item.product.id) &&
+        r.purchaseType === item.purchaseType &&
+        arePrescriptionsEqual(r.prescription, item.prescription)
+    );
+
+    if (matchIdx !== -1) {
+      // Merge quantity into the existing line item
+      const maxStock = item.product.stock_quantity;
+      const combinedQty = Math.min(result[matchIdx].quantity + item.quantity, maxStock);
+      result[matchIdx] = {
+        ...result[matchIdx],
+        quantity: combinedQty,
+      };
+    } else {
+      result.push({ ...item });
+    }
+  }
+
+  return result;
+};
+
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { formatPrice } = useCurrency();
@@ -116,8 +170,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     purchaseType: PurchaseType,
     quantity: number
   ) => {
-    setCartItems((prev) =>
-      prev.map((item, idx) =>
+    setCartItems((prev) => {
+      const updated = prev.map((item, idx) =>
         idx === index
           ? {
               ...item,
@@ -126,8 +180,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               isPendingConfig: false,
             }
           : item
-      )
-    );
+      );
+      return consolidateCart(updated);
+    });
     toast.success('Updated item specifications in basket!');
   };
 
@@ -135,11 +190,48 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let exceedsStock = false;
 
     setCartItems((prev) => {
+      // 1. Direct Target Index Update
       if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < prev.length) {
-        return prev.map((item, idx) =>
+        const updated = prev.map((item, idx) =>
           idx === targetIndex
-            ? { ...item, product, purchaseType: 'standard', isPendingConfig: isFromCard }
+            ? { ...item, product, purchaseType: 'standard' as const, isPendingConfig: isFromCard }
             : item
+        );
+        return consolidateCart(updated);
+      }
+
+      // 2. Added from Product Card (Unfinished / Pending State)
+      if (isFromCard) {
+        const pendingIdx = prev.findIndex(
+          (item) => item.product.id === product.id && item.isPendingConfig
+        );
+
+        if (pendingIdx !== -1) {
+          if (prev[pendingIdx].quantity >= product.stock_quantity) {
+            exceedsStock = true;
+            return prev;
+          }
+          return prev.map((item, idx) =>
+            idx === pendingIdx ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        }
+
+        const newItem: CartItem = { product, quantity: 1, purchaseType: 'standard', isPendingConfig: true };
+        return [...prev, newItem];
+      }
+
+      // 3. Added directly from Product Detail Page (Fully Configured)
+      const completedIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.purchaseType === 'standard' && !item.isPendingConfig
+      );
+
+      if (completedIdx !== -1) {
+        if (prev[completedIdx].quantity >= product.stock_quantity) {
+          exceedsStock = true;
+          return prev;
+        }
+        return prev.map((item, idx) =>
+          idx === completedIdx ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
 
@@ -147,27 +239,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         (item) => item.product.id === product.id && item.isPendingConfig
       );
       if (pendingIdx !== -1) {
-        return prev.map((item, idx) =>
+        const updated = prev.map((item, idx) =>
           idx === pendingIdx
-            ? { ...item, product, purchaseType: 'standard', isPendingConfig: isFromCard }
+            ? { ...item, product, purchaseType: 'standard' as const, isPendingConfig: false }
             : item
         );
+        return consolidateCart(updated);
       }
 
-      const existingIdx = prev.findIndex(
-        (item) => item.product.id === product.id && item.purchaseType === 'standard' && !item.isPendingConfig
-      );
-      if (existingIdx !== -1) {
-        if (prev[existingIdx].quantity >= product.stock_quantity) {
-          exceedsStock = true;
-          return prev;
-        }
-        return prev.map((item, idx) =>
-          idx === existingIdx ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-
-      return [...prev, { product, quantity: 1, purchaseType: 'standard', isPendingConfig: isFromCard }];
+      const newItem: CartItem = { product, quantity: 1, purchaseType: 'standard', isPendingConfig: false };
+      return consolidateCart([...prev, newItem]);
     });
 
     if (exceedsStock) {
@@ -182,11 +263,48 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let exceedsStock = false;
 
     setCartItems((prev) => {
+      // 1. Direct Target Index Update
       if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < prev.length) {
-        return prev.map((item, idx) =>
+        const updated = prev.map((item, idx) =>
           idx === targetIndex
-            ? { ...item, product, purchaseType: 'frames_only', isPendingConfig: isFromCard }
+            ? { ...item, product, purchaseType: 'frames_only' as const, isPendingConfig: isFromCard }
             : item
+        );
+        return consolidateCart(updated);
+      }
+
+      // 2. Added from Product Card (Unfinished / Pending State)
+      if (isFromCard) {
+        const pendingIdx = prev.findIndex(
+          (item) => item.product.id === product.id && item.isPendingConfig
+        );
+
+        if (pendingIdx !== -1) {
+          if (prev[pendingIdx].quantity >= product.stock_quantity) {
+            exceedsStock = true;
+            return prev;
+          }
+          return prev.map((item, idx) =>
+            idx === pendingIdx ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        }
+
+        const newItem: CartItem = { product, quantity: 1, purchaseType: 'frames_only', isPendingConfig: true };
+        return [...prev, newItem];
+      }
+
+      // 3. Added directly from Product Detail Page (Fully Configured)
+      const completedIdx = prev.findIndex(
+        (item) => item.product.id === product.id && item.purchaseType === 'frames_only' && !item.isPendingConfig
+      );
+
+      if (completedIdx !== -1) {
+        if (prev[completedIdx].quantity >= product.stock_quantity) {
+          exceedsStock = true;
+          return prev;
+        }
+        return prev.map((item, idx) =>
+          idx === completedIdx ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
 
@@ -194,27 +312,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         (item) => item.product.id === product.id && item.isPendingConfig
       );
       if (pendingIdx !== -1) {
-        return prev.map((item, idx) =>
+        const updated = prev.map((item, idx) =>
           idx === pendingIdx
-            ? { ...item, product, purchaseType: 'frames_only', isPendingConfig: isFromCard }
+            ? { ...item, product, purchaseType: 'frames_only' as const, isPendingConfig: false }
             : item
         );
+        return consolidateCart(updated);
       }
 
-      const existingIdx = prev.findIndex(
-        (item) => item.product.id === product.id && item.purchaseType === 'frames_only' && !item.isPendingConfig
-      );
-      if (existingIdx !== -1) {
-        if (prev[existingIdx].quantity >= product.stock_quantity) {
-          exceedsStock = true;
-          return prev;
-        }
-        return prev.map((item, idx) =>
-          idx === existingIdx ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-
-      return [...prev, { product, quantity: 1, purchaseType: 'frames_only', isPendingConfig: isFromCard }];
+      const newItem: CartItem = { product, quantity: 1, purchaseType: 'frames_only', isPendingConfig: false };
+      return consolidateCart([...prev, newItem]);
     });
 
     if (exceedsStock) {
@@ -238,18 +345,19 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setCartItems((prev) => {
       if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < prev.length) {
-        return prev.map((item, idx) =>
+        const updated = prev.map((item, idx) =>
           idx === targetIndex
             ? {
                 ...item,
                 product,
                 quantity: totalBoxes,
-                purchaseType: 'contact_lenses',
+                purchaseType: 'contact_lenses' as const,
                 contactLensPrescription,
                 isPendingConfig: false,
               }
             : item
         );
+        return consolidateCart(updated);
       }
 
       const existingIdx = prev.findIndex(
@@ -274,16 +382,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         );
       }
 
-      return [
-        ...prev,
-        {
-          product,
-          quantity: totalBoxes,
-          purchaseType: 'contact_lenses',
-          contactLensPrescription,
-          isPendingConfig: false,
-        },
-      ];
+      const newItem: CartItem = {
+        product,
+        quantity: totalBoxes,
+        purchaseType: 'contact_lenses',
+        contactLensPrescription,
+        isPendingConfig: false,
+      };
+      return [...prev, newItem];
     });
 
     if (exceedsStock) {
@@ -308,40 +414,37 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!selectedProduct) return;
 
     setCartItems((prev) => {
+      let updated: CartItem[];
+
       if (editingItemIndex !== null && editingItemIndex >= 0 && editingItemIndex < prev.length) {
-        return prev.map((item, idx) =>
+        updated = prev.map((item, idx) =>
           idx === editingItemIndex
-            ? { ...item, product: selectedProduct, purchaseType: 'prescription', prescription, isPendingConfig: false }
+            ? { ...item, product: selectedProduct, purchaseType: 'prescription' as const, prescription, isPendingConfig: false }
             : item
         );
-      }
-
-      const pendingIdx = prev.findIndex(
-        (item) => item.product.id === selectedProduct.id && item.isPendingConfig
-      );
-      if (pendingIdx !== -1) {
-        return prev.map((item, idx) =>
-          idx === pendingIdx
-            ? { ...item, product: selectedProduct, purchaseType: 'prescription', prescription, isPendingConfig: false }
-            : item
+      } else {
+        const pendingIdx = prev.findIndex(
+          (item) => item.product.id === selectedProduct.id && item.isPendingConfig
         );
+        if (pendingIdx !== -1) {
+          updated = prev.map((item, idx) =>
+            idx === pendingIdx
+              ? { ...item, product: selectedProduct, purchaseType: 'prescription' as const, prescription, isPendingConfig: false }
+              : item
+          );
+        } else {
+          const newItem: CartItem = {
+            product: selectedProduct,
+            quantity: 1,
+            purchaseType: 'prescription',
+            prescription,
+            isPendingConfig: false,
+          };
+          updated = [...prev, newItem];
+        }
       }
 
-      const existingIdx = prev.findIndex(
-        (item) => item.product.id === selectedProduct.id && item.purchaseType === 'prescription'
-      );
-      if (existingIdx !== -1) {
-        return prev.map((item, idx) =>
-          idx === existingIdx
-            ? { ...item, prescription, isPendingConfig: false }
-            : item
-        );
-      }
-
-      return [
-        ...prev,
-        { product: selectedProduct, quantity: 1, purchaseType: 'prescription', prescription, isPendingConfig: false },
-      ];
+      return consolidateCart(updated);
     });
 
     toast.success(`Prescription details updated for ${selectedProduct.name}!`);
@@ -394,7 +497,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const itemToMove = savedItems[index];
     if (!itemToMove) return;
     setSavedItems((prev) => prev.filter((_, i) => i !== index));
-    setCartItems((prev) => [...prev, itemToMove]);
+    setCartItems((prev) => consolidateCart([...prev, itemToMove]));
     toast.success(`Moved ${itemToMove.product.name} back to your basket!`);
   };
 

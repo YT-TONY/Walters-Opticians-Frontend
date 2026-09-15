@@ -123,9 +123,11 @@ export const ProductDetail: React.FC = () => {
     if (selectedOption === 'prescription') {
       handleSelectPrescription(product);
     } else if (selectedOption === 'frames_only') {
-      handleAddFrameOnly(product);
+      // Pass false to mark isPendingConfig = false when added directly from PDP
+      handleAddFrameOnly(product, false);
     } else {
-      handleAddStandard(product);
+      // Pass false to mark isPendingConfig = false when added directly from PDP
+      handleAddStandard(product, false);
     }
   };
 
@@ -185,7 +187,7 @@ export const ProductDetail: React.FC = () => {
             {/* Main Image Viewer with Overlaid Navigation Controls & Zoom Trigger */}
             <div 
               onClick={() => setIsLightboxOpen(true)}
-              className="relative w-full aspect-4/3 bg-white rounded-2xl overflow-hidden shadow-sm border border-charcoal/10 group cursor-pointer"
+              className="relative w-full aspect-4/3 bg-white rounded-2xl overflow-hidden shadow-xs border border-slate-200 group cursor-pointer"
             >
               <img
                 src={productImages[activeImageIndex] || product.image_url}
@@ -194,7 +196,7 @@ export const ProductDetail: React.FC = () => {
               />
 
               {/* Hover Click-to-Zoom Badge */}
-              <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-walters-navy/80 text-white rounded-full text-[11px] font-light flex items-center space-x-1.5 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-walters-navy/90 text-white rounded-lg text-[11px] font-light flex items-center space-x-1.5 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <ZoomIn className="w-3.5 h-3.5" />
                 <span>Click to expand image</span>
               </div>
@@ -205,7 +207,7 @@ export const ProductDetail: React.FC = () => {
                   <button
                     type="button"
                     onClick={handlePrevImage}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 hover:bg-white text-walters-navy shadow-md border border-charcoal/10 backdrop-blur-xs transition-all cursor-pointer opacity-90 hover:scale-105"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-xl bg-white/90 hover:bg-white text-walters-navy shadow-xs border border-slate-200 transition-all cursor-pointer opacity-90 hover:scale-105"
                     aria-label="Previous Image"
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -214,7 +216,7 @@ export const ProductDetail: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleNextImage}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 hover:bg-white text-walters-navy shadow-md border border-charcoal/10 backdrop-blur-xs transition-all cursor-pointer opacity-90 hover:scale-105"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-xl bg-white/90 hover:bg-white text-walters-navy shadow-xs border border-slate-200 transition-all cursor-pointer opacity-90 hover:scale-105"
                     aria-label="Next Image"
                   >
                     <ChevronRight className="w-5 h-5" />
@@ -235,8 +237,8 @@ export const ProductDetail: React.FC = () => {
                       onClick={() => setActiveImageIndex(idx)}
                       className={`relative w-20 h-20 rounded-xl overflow-hidden bg-white transition-all cursor-pointer border ${
                         isActive 
-                          ? 'border-walters-navy ring-2 ring-walters-navy shadow-md scale-105 opacity-100' 
-                          : 'border-charcoal/15 opacity-60 hover:opacity-100 hover:border-charcoal/40'
+                          ? 'border-walters-navy ring-1 ring-walters-navy shadow-xs opacity-100' 
+                          : 'border-slate-200 opacity-60 hover:opacity-100 hover:border-slate-300'
                       }`}
                     >
                       <img src={img} alt="" className="w-full h-full object-contain p-1" />
@@ -247,90 +249,90 @@ export const ProductDetail: React.FC = () => {
             )}
 
             {/* PRODUCT DESCRIPTION SECTION */}
-            <div className="bg-white p-6 rounded-2xl border border-charcoal/10 space-y-3">
-              <h3 className="font-serif text-lg text-walters-navy border-b border-charcoal/10 pb-2">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-3 shadow-2xs">
+              <h3 className="font-serif text-lg text-walters-navy border-b border-slate-100 pb-2">
                 Product Description
               </h3>
-              <p className="text-xs leading-relaxed text-walters-charcoal/80 font-light">
+              <p className="text-xs leading-relaxed text-slate-600 font-light">
                 {product.description || 
                   `Buy Now ${product.gender || "Women's"} Glasses Online ${product.brand} ${product.name} - ${product.color_code || '8228'} ${product.color_description} ${product.shape}, at a reduced price at the best price. Made in Italy New ${product.brand} Collection. Visit our store.`}
               </p>
             </div>
 
             {/* PRODUCT DETAILS SPECIFICATIONS GRID */}
-            <div className="bg-white p-6 rounded-2xl border border-charcoal/10 space-y-4">
-              <div className="flex items-center justify-between border-b border-charcoal/10 pb-3">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="font-serif text-lg text-walters-navy">
                   Product Details
                 </h3>
-                <span className="text-[11px] font-light text-walters-navy/60 uppercase tracking-widest">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">
                   Ref: {product.model_code || product.name.toUpperCase()}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs">
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Kind</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Kind</span>
                   <span className="font-medium text-walters-navy">Glasses</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Color Code</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Color Code</span>
                   <span className="font-medium text-walters-navy">{product.color_code || '8228'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Frame Material</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Frame Material</span>
                   <span className="font-medium text-walters-navy">{product.frame_material || 'Plastic'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Glass Material</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Glass Material</span>
                   <span className="font-medium text-walters-navy">{product.lens_material || 'Demo Lens'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Frame Color</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Frame Color</span>
                   <span className="font-medium text-walters-navy">{product.color_description}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Lens Color</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Lens Color</span>
                   <span className="font-medium text-walters-navy">{product.lens_color || 'Transparent'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Bridge</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Bridge</span>
                   <span className="font-medium text-walters-navy">{bridgeWidth}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Branch Length</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Branch Length</span>
                   <span className="font-medium text-walters-navy">{templeLength}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Lens Length</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Lens Length</span>
                   <span className="font-medium text-walters-navy">{lensWidth}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Glass Height</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Glass Height</span>
                   <span className="font-medium text-walters-navy">{lensHeight}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Eyeglass Shape</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Eyeglass Shape</span>
                   <span className="font-medium text-walters-navy capitalize">{product.shape}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Glass Base</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Glass Base</span>
                   <span className="font-medium text-walters-navy">{product.glass_base || 'Base 4'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Polarized</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Polarized</span>
                   <span className="font-medium text-walters-navy">{product.polarized ? 'Yes' : 'No'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Photochromic</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Photochromic</span>
                   <span className="font-medium text-walters-navy">{product.photochromic ? 'Yes' : 'No'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Gradables</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Gradables</span>
                   <span className="font-medium text-walters-navy">{product.gradables ? 'Yes' : 'No'}</span>
                 </div>
                 <div>
-                  <span className="text-walters-charcoal/50 block text-[11px] font-light">Gender</span>
+                  <span className="text-slate-400 block text-[11px] font-light">Gender</span>
                   <span className="font-medium text-walters-navy capitalize">{product.gender || 'Women'}</span>
                 </div>
               </div>
@@ -340,22 +342,22 @@ export const ProductDetail: React.FC = () => {
 
           {/* RIGHT: Product Details & Purchase Form */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="border-b border-charcoal/10 pb-6 space-y-2">
-              <span className="text-xs font-light tracking-widest text-walters-navy/60 uppercase">
+            <div className="border-b border-slate-200 pb-6 space-y-2">
+              <span className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
                 {product.brand}
               </span>
               <h1 className="font-serif text-3xl sm:text-4xl font-normal text-walters-navy tracking-tight">
                 {product.name}
               </h1>
-              <p className="text-xl font-light text-walters-charcoal pt-2">
+              <p className="text-xl font-light text-walters-navy pt-2">
                 {formatPrice(product.price_full_gbp)}
               </p>
             </div>
 
             {/* SIZES & SIZE CHART BUTTON */}
-            <div className="bg-white p-4 rounded-xl border border-charcoal/10 flex items-center justify-between">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between shadow-2xs">
               <div>
-                <span className="text-[11px] font-light text-walters-charcoal/60 uppercase tracking-wider block">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
                   Frame Measurements
                 </span>
                 <span className="text-sm font-medium text-walters-navy">
@@ -365,7 +367,7 @@ export const ProductDetail: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowSizeGuide(true)}
-                className="flex items-center space-x-1.5 text-xs text-walters-navy underline underline-offset-4 hover:opacity-70 cursor-pointer"
+                className="flex items-center space-x-1.5 text-xs font-medium text-walters-navy underline underline-offset-4 hover:opacity-70 cursor-pointer"
               >
                 <Ruler className="w-3.5 h-3.5 text-walters-navy" />
                 <span>Size Chart & Guide</span>
@@ -374,12 +376,12 @@ export const ProductDetail: React.FC = () => {
 
             {/* COLOR VARIANTS SELECTOR */}
             {colorVariants.length > 1 && (
-              <div className="space-y-3 pt-1 border-b border-charcoal/10 pb-6">
+              <div className="space-y-3 pt-1 border-b border-slate-200 pb-6">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-light uppercase tracking-wider text-walters-charcoal/70">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-500">
                     Frame Color: <span className="font-semibold text-walters-navy">{product.color_description}</span>
                   </label>
-                  <span className="text-[11px] text-walters-charcoal/50">{colorVariants.length} Colorways</span>
+                  <span className="text-[11px] text-slate-400">{colorVariants.length} Colorways</span>
                 </div>
 
                 <div className="flex flex-wrap gap-2.5">
@@ -392,11 +394,11 @@ export const ProductDetail: React.FC = () => {
                         onClick={() => navigate(`/product/${variant.id}`)}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-xl border text-xs transition-all cursor-pointer ${
                           isSelected
-                            ? 'border-walters-navy bg-white shadow-sm text-walters-navy font-semibold'
-                            : 'border-charcoal/10 bg-transparent text-walters-charcoal/70 hover:border-charcoal/30'
+                            ? 'border-walters-navy bg-walters-navy/5 text-walters-navy font-semibold ring-1 ring-walters-navy'
+                            : 'border-slate-200 bg-transparent text-slate-600 hover:border-slate-300'
                         }`}
                       >
-                        <div className="w-4 h-4 rounded-full border border-charcoal/20 overflow-hidden shrink-0 bg-walters-cream">
+                        <div className="w-4 h-4 rounded-full border border-slate-200 overflow-hidden shrink-0 bg-slate-100">
                           {variant.image_url && (
                             <img src={variant.image_url} alt="" className="w-full h-full object-cover" />
                           )}
@@ -412,7 +414,7 @@ export const ProductDetail: React.FC = () => {
 
             {/* Option Selectors */}
             <div className="space-y-3 pt-2">
-              <label className="text-xs font-light uppercase tracking-wider text-walters-charcoal/70 block">
+              <label className="text-xs font-medium uppercase tracking-wider text-slate-500 block">
                 Purchase Option
               </label>
               
@@ -422,15 +424,15 @@ export const ProductDetail: React.FC = () => {
                   onClick={() => setSelectedOption('standard')}
                   className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
                     selectedOption === 'standard'
-                      ? 'border-walters-navy bg-white shadow-sm'
-                      : 'border-charcoal/10 bg-transparent hover:border-charcoal/30'
+                      ? 'border-walters-navy bg-walters-navy/5 ring-1 ring-walters-navy shadow-2xs'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="text-sm font-light text-walters-navy">Frame + Non-Prescription Lenses</div>
-                    <div className="text-xs font-light text-walters-charcoal/50">Ready to wear immediately</div>
+                    <div className="text-sm font-medium text-walters-navy">Frame + Non-Prescription Lenses</div>
+                    <div className="text-xs font-light text-slate-500">Ready to wear immediately</div>
                   </div>
-                  <span className="text-xs font-light">{formatPrice(product.price_full_gbp)}</span>
+                  <span className="text-xs font-medium text-walters-navy">{formatPrice(product.price_full_gbp)}</span>
                 </button>
 
                 <button
@@ -438,15 +440,15 @@ export const ProductDetail: React.FC = () => {
                   onClick={() => setSelectedOption('prescription')}
                   className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
                     selectedOption === 'prescription'
-                      ? 'border-walters-navy bg-white shadow-sm'
-                      : 'border-charcoal/10 bg-transparent hover:border-charcoal/30'
+                      ? 'border-walters-navy bg-walters-navy/5 ring-1 ring-walters-navy shadow-2xs'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="text-sm font-normal text-walters-navy">+ Add Prescription Lenses</div>
-                    <div className="text-xs font-light text-walters-charcoal/50">Tailored single vision or progressive</div>
+                    <div className="text-sm font-medium text-walters-navy">+ Add Prescription Lenses</div>
+                    <div className="text-xs font-light text-slate-500">Tailored single vision or progressive</div>
                   </div>
-                  <span className="text-xs font-light">Included</span>
+                  <span className="text-xs font-medium text-walters-navy">Included</span>
                 </button>
 
                 <button
@@ -454,15 +456,15 @@ export const ProductDetail: React.FC = () => {
                   onClick={() => setSelectedOption('frames_only')}
                   className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
                     selectedOption === 'frames_only'
-                      ? 'border-walters-navy bg-white shadow-sm'
-                      : 'border-charcoal/10 bg-transparent hover:border-charcoal/30'
+                      ? 'border-walters-navy bg-walters-navy/5 ring-1 ring-walters-navy shadow-2xs'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
                   <div>
-                    <div className="text-sm font-light text-walters-navy">Frames Only</div>
-                    <div className="text-xs font-light text-walters-charcoal/50">Demo lenses fitted</div>
+                    <div className="text-sm font-medium text-walters-navy">Frames Only</div>
+                    <div className="text-xs font-light text-slate-500">Demo lenses fitted</div>
                   </div>
-                  <span className="text-xs font-light">{formatPrice(product.price_frame_only_gbp)}</span>
+                  <span className="text-xs font-medium text-walters-navy">{formatPrice(product.price_frame_only_gbp)}</span>
                 </button>
               </div>
             </div>
@@ -471,24 +473,24 @@ export const ProductDetail: React.FC = () => {
             <button
               type="button"
               onClick={handleBagSubmit}
-              className="w-full flex items-center justify-center space-x-3 bg-walters-navy text-white text-sm font-light tracking-wide py-4 rounded-full hover:bg-walters-navy/90 transition-colors shadow-md cursor-pointer"
+              className="w-full flex items-center justify-center space-x-3 bg-walters-navy text-white text-xs font-medium uppercase tracking-wider py-4 rounded-xl hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4 stroke-[1.5]" />
+              <ShoppingBag className="w-4 h-4" />
               <span>Add to Bag — {formatPrice(selectedOption === 'frames_only' ? product.price_frame_only_gbp : product.price_full_gbp)}</span>
             </button>
 
             {/* Specifications & Perks */}
-            <div className="border-t border-charcoal/10 pt-6 space-y-4 text-xs font-light text-walters-charcoal/80">
+            <div className="border-t border-slate-200 pt-6 space-y-4 text-xs font-light text-slate-600">
               <div className="flex items-center space-x-3">
-                <Truck className="w-4 h-4 text-walters-navy/70 stroke-[1.5]" />
+                <Truck className="w-4 h-4 text-walters-navy/80" />
                 <span>Complimentary tracked express shipping on all orders</span>
               </div>
               <div className="flex items-center space-x-3">
-                <ShieldCheck className="w-4 h-4 text-walters-navy/70 stroke-[1.5]" />
+                <ShieldCheck className="w-4 h-4 text-walters-navy/80" />
                 <span>2-year optician warranty & hardshell leather case included</span>
               </div>
               <div className="flex items-center space-x-3">
-                <RefreshCw className="w-4 h-4 text-walters-navy/70 stroke-[1.5]" />
+                <RefreshCw className="w-4 h-4 text-walters-navy/80" />
                 <span>30-day hassle-free returns</span>
               </div>
             </div>
@@ -505,7 +507,7 @@ export const ProductDetail: React.FC = () => {
       {/* FULL-SCREEN IMAGE INSPECTION LIGHTBOX OVERLAY */}
       {isLightboxOpen && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-between p-4 sm:p-8 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-walters-navy/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-8 animate-in fade-in duration-200"
           onClick={() => setIsLightboxOpen(false)}
         >
           {/* Lightbox Header */}
@@ -520,7 +522,7 @@ export const ProductDetail: React.FC = () => {
                 e.stopPropagation();
                 setIsLightboxOpen(false);
               }}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
               aria-label="Close Lightbox"
             >
               <X className="w-6 h-6" />
@@ -544,7 +546,7 @@ export const ProductDetail: React.FC = () => {
                 <button
                   type="button"
                   onClick={handlePrevImage}
-                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white shadow-lg backdrop-blur-md transition-all cursor-pointer"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 rounded-xl bg-white/10 hover:bg-white/25 text-white backdrop-blur-md transition-all cursor-pointer"
                   aria-label="Previous Image"
                 >
                   <ChevronLeft className="w-6 h-6" />
@@ -552,7 +554,7 @@ export const ProductDetail: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleNextImage}
-                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white shadow-lg backdrop-blur-md transition-all cursor-pointer"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 rounded-xl bg-white/10 hover:bg-white/25 text-white backdrop-blur-md transition-all cursor-pointer"
                   aria-label="Next Image"
                 >
                   <ChevronRight className="w-6 h-6" />
@@ -591,42 +593,42 @@ export const ProductDetail: React.FC = () => {
 
       {/* TWO-TAB SIZE CHART & GUIDE MODAL */}
       {showSizeGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-6 shadow-2xl relative border border-charcoal/10 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-walters-navy/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-6 shadow-2xl relative border border-slate-200 max-h-[90vh] overflow-y-auto">
             
             {/* Header & Tabs */}
-            <div className="flex items-center justify-between border-b border-charcoal/10 pb-2">
-              <div className="flex space-x-6 text-xs font-semibold tracking-wider">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex space-x-6 text-xs font-medium tracking-wider">
                 <button
                   type="button"
                   onClick={() => setSizeModalTab('chart')}
                   className={`pb-2 border-b-2 transition-all cursor-pointer uppercase ${
                     sizeModalTab === 'chart'
-                      ? 'border-amber-500 text-walters-navy font-bold'
-                      : 'border-transparent text-walters-charcoal/50 hover:text-walters-navy'
+                      ? 'border-walters-navy text-walters-navy font-semibold'
+                      : 'border-transparent text-slate-400 hover:text-walters-navy'
                   }`}
                 >
-                  SIZE CHART
+                  Size Chart
                 </button>
                 <button
                   type="button"
                   onClick={() => setSizeModalTab('guide')}
                   className={`pb-2 border-b-2 transition-all cursor-pointer uppercase ${
                     sizeModalTab === 'guide'
-                      ? 'border-amber-500 text-walters-navy font-bold'
-                      : 'border-transparent text-walters-charcoal/50 hover:text-walters-navy'
+                      ? 'border-walters-navy text-walters-navy font-semibold'
+                      : 'border-transparent text-slate-400 hover:text-walters-navy'
                   }`}
                 >
-                  FIT & SIZE GUIDE
+                  Fit & Size Guide
                 </button>
               </div>
 
               <button 
                 type="button" 
                 onClick={() => setShowSizeGuide(false)}
-                className="p-1 rounded-full hover:bg-charcoal/5 cursor-pointer -mt-2"
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-walters-navy cursor-pointer"
               >
-                <X className="w-5 h-5 text-walters-charcoal" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -635,15 +637,15 @@ export const ProductDetail: React.FC = () => {
               <div className="space-y-6 text-xs">
                 <div className="text-center space-y-1">
                   <h4 className="font-semibold text-walters-navy text-sm">If you already wear glasses</h4>
-                  <p className="text-walters-charcoal/70 text-[11px]">
-                    Check the measurements inside your current frame for the best match. Stamped on this frame: <strong className="text-walters-navy">{lensWidth} □ {bridgeWidth} - {templeLength}</strong>
+                  <p className="text-slate-500 text-[11px] font-light">
+                    Check the measurements inside your current frame for the best match. Stamped on this frame: <strong className="text-walters-navy font-medium">{lensWidth} □ {bridgeWidth} - {templeLength}</strong>
                   </p>
                 </div>
 
                 {/* Reference Table */}
-                <div className="overflow-hidden rounded-lg border border-amber-500">
+                <div className="overflow-hidden rounded-xl border border-slate-200 shadow-2xs">
                   <table className="w-full text-center text-[11px]">
-                    <thead className="bg-amber-500 text-white font-semibold uppercase">
+                    <thead className="bg-slate-50 text-walters-navy font-semibold uppercase border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-2 text-left pl-4">Size</th>
                         <th className="py-2.5 px-2">Lens Width</th>
@@ -651,36 +653,36 @@ export const ProductDetail: React.FC = () => {
                         <th className="py-2.5 px-2">Temple Length</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-amber-200 text-walters-navy">
-                      <tr className={lensWidth < 42 ? 'bg-amber-50 font-bold' : ''}>
-                        <td className="py-2 px-2 text-left pl-4 font-semibold text-amber-600">Extra-Small</td>
-                        <td className="py-2 px-2">Below 42 mm</td>
-                        <td className="py-2 px-2">Below 16 mm</td>
-                        <td className="py-2 px-2">Below 130 mm</td>
+                    <tbody className="divide-y divide-slate-100 text-walters-navy font-normal">
+                      <tr className={lensWidth < 42 ? 'bg-slate-50 font-semibold' : ''}>
+                        <td className="py-2.5 px-2 text-left pl-4 font-semibold text-walters-navy">Extra-Small</td>
+                        <td className="py-2.5 px-2">Below 42 mm</td>
+                        <td className="py-2.5 px-2">Below 16 mm</td>
+                        <td className="py-2.5 px-2">Below 130 mm</td>
                       </tr>
-                      <tr className={lensWidth >= 42 && lensWidth <= 49 ? 'bg-amber-50 font-bold' : ''}>
-                        <td className="py-2 px-2 text-left pl-4 font-semibold text-amber-600">Small</td>
-                        <td className="py-2 px-2">42-49 mm</td>
-                        <td className="py-2 px-2">16-18 mm</td>
-                        <td className="py-2 px-2">130-135 mm</td>
+                      <tr className={lensWidth >= 42 && lensWidth <= 49 ? 'bg-slate-50 font-semibold' : ''}>
+                        <td className="py-2.5 px-2 text-left pl-4 font-semibold text-walters-navy">Small</td>
+                        <td className="py-2.5 px-2">42-49 mm</td>
+                        <td className="py-2.5 px-2">16-18 mm</td>
+                        <td className="py-2.5 px-2">130-135 mm</td>
                       </tr>
-                      <tr className={lensWidth >= 50 && lensWidth <= 54 ? 'bg-amber-50 font-bold' : ''}>
-                        <td className="py-2 px-2 text-left pl-4 font-semibold text-amber-600">Medium</td>
-                        <td className="py-2 px-2">50-54 mm</td>
-                        <td className="py-2 px-2">19-20 mm</td>
-                        <td className="py-2 px-2">136-145 mm</td>
+                      <tr className={lensWidth >= 50 && lensWidth <= 54 ? 'bg-slate-50 font-semibold' : ''}>
+                        <td className="py-2.5 px-2 text-left pl-4 font-semibold text-walters-navy">Medium</td>
+                        <td className="py-2.5 px-2">50-54 mm</td>
+                        <td className="py-2.5 px-2">19-20 mm</td>
+                        <td className="py-2.5 px-2">136-145 mm</td>
                       </tr>
-                      <tr className={lensWidth >= 55 && lensWidth <= 58 ? 'bg-amber-50 font-bold' : ''}>
-                        <td className="py-2 px-2 text-left pl-4 font-semibold text-amber-600">Large</td>
-                        <td className="py-2 px-2">55-58 mm</td>
-                        <td className="py-2 px-2">21-23 mm</td>
-                        <td className="py-2 px-2">146-150 mm</td>
+                      <tr className={lensWidth >= 55 && lensWidth <= 58 ? 'bg-slate-50 font-semibold' : ''}>
+                        <td className="py-2.5 px-2 text-left pl-4 font-semibold text-walters-navy">Large</td>
+                        <td className="py-2.5 px-2">55-58 mm</td>
+                        <td className="py-2.5 px-2">21-23 mm</td>
+                        <td className="py-2.5 px-2">146-150 mm</td>
                       </tr>
-                      <tr className={lensWidth > 58 ? 'bg-amber-50 font-bold' : ''}>
-                        <td className="py-2 px-2 text-left pl-4 font-semibold text-amber-600">Extra-Large</td>
-                        <td className="py-2 px-2">Above 58 mm</td>
-                        <td className="py-2 px-2">Above 23 mm</td>
-                        <td className="py-2 px-2">Above 150 mm</td>
+                      <tr className={lensWidth > 58 ? 'bg-slate-50 font-semibold' : ''}>
+                        <td className="py-2.5 px-2 text-left pl-4 font-semibold text-walters-navy">Extra-Large</td>
+                        <td className="py-2.5 px-2">Above 58 mm</td>
+                        <td className="py-2.5 px-2">Above 23 mm</td>
+                        <td className="py-2.5 px-2">Above 150 mm</td>
                       </tr>
                     </tbody>
                   </table>
@@ -688,54 +690,49 @@ export const ProductDetail: React.FC = () => {
 
                 {/* Custom Uploaded Size Chart Image if provided by Admin */}
                 {product.size_chart_url && (
-                  <div className="pt-2 border-t border-charcoal/10">
+                  <div className="pt-2 border-t border-slate-100">
                     <span className="block text-[11px] font-semibold text-walters-navy mb-2">Frame Specific Diagram:</span>
-                    <img src={product.size_chart_url} alt="Custom Size Chart" className="w-full rounded-xl object-contain border border-charcoal/10 max-h-48 bg-offwhite" />
+                    <img src={product.size_chart_url} alt="Custom Size Chart" className="w-full rounded-xl object-contain border border-slate-200 max-h-48 bg-slate-50" />
                   </div>
                 )}
 
-                <p className="text-[10px] text-walters-charcoal/60 italic text-center">
-                  * This is a general size guide reference. Depending on frame style or brand, minor variances may occur.
+                <p className="text-[10px] text-slate-400 italic text-center">
+                  * General size reference guide. Slight manufacturing variances may occur depending on frame construction.
                 </p>
               </div>
             )}
 
             {/* TAB 2: FIT & SIZE GUIDE */}
             {sizeModalTab === 'guide' && (
-              <div className="space-y-5 text-xs">
+              <div className="space-y-4 text-xs">
                 <div className="text-center space-y-1">
                   <h4 className="font-semibold text-walters-navy text-sm">If you don't wear glasses</h4>
-                  <p className="text-walters-charcoal/70 text-[11px]">
-                    You only need a ruler and a mirror. All measurements are in millimeters (mm).
+                  <p className="text-slate-500 text-[11px] font-light">
+                    All measurements are standard optical values in millimeters (mm).
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="bg-walters-cream/40 p-3 rounded-xl space-y-1">
-                    <span className="font-semibold text-walters-navy block">Frame width</span>
-                    <p className="text-walters-charcoal/70 text-[11px]">
-                      Measure across your face from one side of your forehead to the other, just above your eyebrows.
+                <div className="space-y-2.5">
+                  <div className="bg-slate-50 p-3.5 rounded-xl space-y-1 border border-slate-100">
+                    <span className="font-semibold text-walters-navy block">Frame Width</span>
+                    <p className="text-slate-500 text-[11px] font-light">
+                      Measure across your face from temple to temple just above your eyebrow line.
                     </p>
                   </div>
 
-                  <div className="bg-walters-cream/40 p-3 rounded-xl space-y-1">
+                  <div className="bg-slate-50 p-3.5 rounded-xl space-y-1 border border-slate-100">
                     <span className="font-semibold text-walters-navy block">Bridge Width</span>
-                    <p className="text-walters-charcoal/70 text-[11px]">
-                      Measure the width of your nose at the narrowest point between your eyes.
+                    <p className="text-slate-500 text-[11px] font-light">
+                      Measure the width of your nose bridge at its narrowest point between your eyes.
                     </p>
                   </div>
 
-                  <div className="bg-walters-cream/40 p-3 rounded-xl space-y-1">
+                  <div className="bg-slate-50 p-3.5 rounded-xl space-y-1 border border-slate-100">
                     <span className="font-semibold text-walters-navy block">Temple Length</span>
-                    <p className="text-walters-charcoal/70 text-[11px]">
-                      Measure from the side of your face to just behind your ear, following the natural curve of your head.
+                    <p className="text-slate-500 text-[11px] font-light">
+                      Measure from the side of your face to just behind your ear along the curve of your head.
                     </p>
                   </div>
-                </div>
-
-                <div className="p-3 bg-blue-50 text-blue-900 rounded-xl space-y-1 text-[11px]">
-                  <span className="font-semibold block">Need extra advice?</span>
-                  <p>Our opticians are available for virtual consultations and size fittings.</p>
                 </div>
               </div>
             )}
@@ -743,9 +740,9 @@ export const ProductDetail: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowSizeGuide(false)}
-              className="w-full py-3 bg-walters-navy text-white text-xs font-light rounded-full hover:bg-walters-navy/90 cursor-pointer"
+              className="w-full py-3 bg-walters-navy text-white text-xs font-medium uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
             >
-              Got It
+              Close Guide
             </button>
           </div>
         </div>

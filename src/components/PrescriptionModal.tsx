@@ -416,9 +416,9 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsPDModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 bg-white text-walters-navy rounded-xl text-xs font-medium hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-orange-500/70 hover:bg-orange-500/85 text-white border border-orange-500/30 rounded-xl text-xs font-medium transition-colors cursor-pointer shadow-2xs"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-walters-navy" />
+                      <Sparkles className="w-3.5 h-3.5 text-white" />
                       <span>Scan Pupillary Distance (PD)</span>
                     </button>
                   )}

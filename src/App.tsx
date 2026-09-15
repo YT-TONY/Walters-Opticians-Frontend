@@ -29,12 +29,6 @@ import { ChatBot } from './components/ChatBot';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 
-// =========================================================================
-// TEMPORARY TEST IMPORT - DELETE THIS WHEN DONE TESTING
-// =========================================================================
-import { VirtualPDModal } from './components/VirtualPDModal';
-// =========================================================================
-
 // Customer Pages
 import { Catalog } from './pages/Catalog';
 import { ProductDetail } from './pages/ProductDetail';
@@ -97,12 +91,6 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const { formatPrice } = useCurrency();
   const location = useLocation();
-
-  // =========================================================================
-  // TEMPORARY TEST STATE - DELETE THIS WHEN DONE TESTING
-  // =========================================================================
-  const [isTestPDModalOpen, setIsTestPDModalOpen] = useState(false);
-  // =========================================================================
 
   const { 
     cartItems, 
@@ -184,33 +172,6 @@ const AppContent: React.FC = () => {
 
       {/* Global Storefront Footer */}
       {!hideHeader && <Footer />}
-
-      {/* ========================================================================= */}
-      {/* TEMPORARY TEST BUTTON & MODAL FOR VIRTUAL PD SCANNER                      */}
-      {/* DELETE THIS ENTIRE BLOCK WHEN DONE TESTING                                */}
-      {/* ========================================================================= */}
-      {!isAdminRoute && !isAuthRoute && (
-        <div className="fixed bottom-6 left-6 z-50">
-          <button
-            type="button"
-            onClick={() => setIsTestPDModalOpen(true)}
-            className="px-5 py-3 bg-amber-500 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-full shadow-2xl border-2 border-white hover:bg-amber-400 transition-all cursor-pointer flex items-center gap-2"
-          >
-            <span>🧪 Test Virtual PD Scanner</span>
-          </button>
-        </div>
-      )}
-
-      <VirtualPDModal
-        isOpen={isTestPDModalOpen}
-        onClose={() => setIsTestPDModalOpen(false)}
-        onComplete={(pd) => {
-          alert(`Success! Calculated Pupillary Distance: ${pd} mm`);
-        }}
-      />
-      {/* ========================================================================= */}
-      {/* END TEMPORARY TEST BLOCK                                                  */}
-      {/* ========================================================================= */}
 
       {selectedProduct && (
         <PrescriptionModal

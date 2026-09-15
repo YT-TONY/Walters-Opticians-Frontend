@@ -12,7 +12,8 @@ import {
   Ruler, 
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ZoomIn
 } from 'lucide-react';
 import axios from 'axios';
 import { useCurrency } from '../hooks/useCurrency';
@@ -33,8 +34,9 @@ export const ProductDetail: React.FC = () => {
 
   const [selectedOption, setSelectedOption] = useState<'standard' | 'frames_only' | 'prescription'>('standard');
   
-  // Image Carousel States
+  // Image Carousel & Lightbox States
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
   
   // Modal & Tab States
   const [showSizeGuide, setShowSizeGuide] = useState<boolean>(false);
@@ -92,23 +94,25 @@ export const ProductDetail: React.FC = () => {
     return primaryImg ? [primaryImg, ...galleryFiltered] : galleryFiltered;
   }, [product]);
 
-  // Auto-scroll images every 10 seconds
+  // Auto-scroll images every 10 seconds (disabled when lightbox is active)
   useEffect(() => {
-    if (productImages.length <= 1) return;
+    if (productImages.length <= 1 || isLightboxOpen) return;
 
     const interval = setInterval(() => {
       setActiveImageIndex((prev) => (prev + 1) % productImages.length);
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [productImages.length]);
+  }, [productImages.length, isLightboxOpen]);
 
-  const handlePrevImage = () => {
+  const handlePrevImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (productImages.length <= 1) return;
     setActiveImageIndex((prev) => (prev - 1 + productImages.length) % productImages.length);
   };
 
-  const handleNextImage = () => {
+  const handleNextImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (productImages.length <= 1) return;
     setActiveImageIndex((prev) => (prev + 1) % productImages.length);
   };
@@ -178,13 +182,22 @@ export const ProductDetail: React.FC = () => {
           {/* LEFT: Product Images Gallery, Description & Details */}
           <div className="lg:col-span-7 space-y-8 sticky top-24">
             
-            {/* Main Image Viewer with Overlaid Navigation Controls */}
-            <div className="relative w-full aspect-4/3 bg-white rounded-2xl overflow-hidden shadow-sm border border-charcoal/10 group">
+            {/* Main Image Viewer with Overlaid Navigation Controls & Zoom Trigger */}
+            <div 
+              onClick={() => setIsLightboxOpen(true)}
+              className="relative w-full aspect-4/3 bg-white rounded-2xl overflow-hidden shadow-sm border border-charcoal/10 group cursor-pointer"
+            >
               <img
                 src={productImages[activeImageIndex] || product.image_url}
                 alt={product.name}
                 className="w-full h-full object-contain p-6 transition-all duration-500 ease-in-out"
               />
+
+              {/* Hover Click-to-Zoom Badge */}
+              <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-walters-navy/80 text-white rounded-full text-[11px] font-light flex items-center space-x-1.5 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <ZoomIn className="w-3.5 h-3.5" />
+                <span>Click to expand image</span>
+              </div>
 
               {/* Navigation Arrows */}
               {productImages.length > 1 && (
@@ -488,6 +501,93 @@ export const ProductDetail: React.FC = () => {
         contextPage="product"
         currentProduct={product}
       />
+
+      {/* FULL-SCREEN IMAGE INSPECTION LIGHTBOX OVERLAY */}
+      {isLightboxOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-between p-4 sm:p-8 animate-in fade-in duration-200"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          {/* Lightbox Header */}
+          <div className="flex items-center justify-between w-full text-white/80 z-10 shrink-0">
+            <div className="text-xs font-light">
+              <span className="font-medium text-white">{product.brand}</span> — {product.name}
+              <span className="ml-3 text-white/50">({activeImageIndex + 1} / {productImages.length})</span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsLightboxOpen(false);
+              }}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              aria-label="Close Lightbox"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Lightbox Center Image View */}
+          <div 
+            className="relative flex-1 w-full max-w-6xl mx-auto flex items-center justify-center my-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={productImages[activeImageIndex] || product.image_url}
+              alt={product.name}
+              className="max-w-full max-h-full object-contain select-none shadow-2xl transition-all duration-300"
+            />
+
+            {/* Navigation Arrows inside Lightbox */}
+            {productImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevImage}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white shadow-lg backdrop-blur-md transition-all cursor-pointer"
+                  aria-label="Previous Image"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextImage}
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white shadow-lg backdrop-blur-md transition-all cursor-pointer"
+                  aria-label="Next Image"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Lightbox Bottom Thumbnail Bar */}
+          {productImages.length > 1 && (
+            <div 
+              className="flex justify-center space-x-3 overflow-x-auto py-2 z-10 shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {productImages.map((img: string, idx: number) => {
+                const isActive = idx === activeImageIndex;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`relative w-16 h-16 rounded-xl overflow-hidden bg-white/10 border transition-all cursor-pointer ${
+                      isActive
+                        ? 'border-white ring-2 ring-white scale-105 opacity-100 bg-white'
+                        : 'border-white/20 opacity-40 hover:opacity-80'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-contain p-1" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* TWO-TAB SIZE CHART & GUIDE MODAL */}
       {showSizeGuide && (

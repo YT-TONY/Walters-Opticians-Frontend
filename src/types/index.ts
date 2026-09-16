@@ -1,3 +1,4 @@
+//src/types/index.ts
 export type ProductCategory = 'optical_frames' | 'sunglasses' | 'contact_lenses' | 'lens_care';
 export type ReplacementFrequency = 'daily' | 'bi_weekly' | 'monthly' | 'ortho_k';
 export type LensDesign = 'spherical' | 'toric' | 'multifocal' | 'colored';
@@ -61,15 +62,27 @@ export interface Product {
   gallery?: string[];
   images?: string[];
   contact_lens_detail?: ContactLensProductDetail;
+
+  // Extended Contact Lens & Optical Specs
+  colors?: string[];
+  is_contact_lens?: boolean;
+  usage_type?: string;
+  pack_size?: string | number;
+  lens_design?: string;
+  bc?: string;
+  dia?: string;
+  water_content?: string;
 }
 
 export interface EyeConfig {
-  sph: number;
+  power?: string;
+  sph?: number;
   cyl?: number;
   axis?: number;
   add_power?: string;
-  bc: number;
-  dia: number;
+  bc: string | number;
+  dia: string | number;
+  color?: string;
   boxes_quantity: number;
 }
 

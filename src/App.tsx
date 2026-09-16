@@ -31,6 +31,7 @@ import { Toaster } from 'sonner';
 
 // Customer Pages
 import { Catalog } from './pages/Catalog';
+import { BrandPage } from './pages/BrandPage';
 import { ProductDetail } from './pages/ProductDetail';
 import { Favorites } from './pages/Favorites';
 import { Login } from './pages/Login';
@@ -128,6 +129,7 @@ const AppContent: React.FC = () => {
           {/* Default Public Storefront Routes */}
           <Route path="/" element={<HomeView />} />
           <Route path="/catalog" element={<Catalog />} />
+          <Route path="/brands/:brandSlug" element={<BrandPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/cart" element={<Cart />} />

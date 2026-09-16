@@ -28,15 +28,15 @@ const ALL_SHAPES = ['Aviator', 'Wayfarer', 'Cat Eye', 'Round', 'Square', 'Rectan
 const FRAME_TYPE_OPTIONS = ['Full Rim', 'Semi-Rimless', 'Rimless'];
 const LENS_TYPE_OPTIONS = ['Single Vision', 'Blue Light Glasses', 'Multifocal/Progressive', 'Polarized'];
 
-// Map frame shape to public image assets
+// Map frame shape to public image assets (Removed 'public/' prefix and standardized paths)
 const SHAPE_IMAGE_MAP: Record<string, string> = {
-  Aviator: '/IMAGES/GLASSES/SHAPES/aviator.png',
-  Wayfarer: '/IMAGES/GLASSES/SHAPES/wayfarer.png',
-  'Cat Eye': '/IMAGES/GLASSES/SHAPES/cat-eye.png',
-  Round: '/IMAGES/GLASSES/SHAPES/round.png',
-  Square: '/IMAGES/GLASSES/SHAPES/square.png',
-  Rectangle: '/IMAGES/GLASSES/SHAPES/rectangle.png',
-  Oval: '/IMAGES/GLASSES/SHAPES/oval.png',
+  Aviator: '/IMAGES/GLASSES/SHAPE/AVIATOR.png',
+  Wayfarer: '/IMAGES/GLASSES/SHAPE/WAYFAYER.png',
+  'Cat Eye': '/IMAGES/GLASSES/SHAPE/CATEYE.png',
+  Round: '/IMAGES/GLASSES/SHAPE/ROUND.png',
+  Square: '/IMAGES/GLASSES/SHAPE/SQUARE.png',
+  Rectangle: '/IMAGES/GLASSES/SHAPE/RECTANGLE.png',
+  Oval: '/IMAGES/GLASSES/SHAPE/OVAL.png', // FIXED: Removed 'public/' prefix
 };
 
 // Swatch style dictionary for color name lookups
@@ -81,7 +81,6 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
   onClearAll,
   availableProducts = [],
 }) => {
-  // 1. Dynamically extract colors available under the active product set (ALWAYS CALL HOOKS AT TOP LEVEL)
   const dynamicColors = useMemo(() => {
     if (!availableProducts.length) {
       return ['Black', 'Tortoise', 'Gold', 'Silver', 'Blue', 'Clear', 'Rose Gold'];
@@ -104,7 +103,6 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
     return Array.from(colorSet).slice(0, 12);
   }, [availableProducts]);
 
-  // 2. Dynamically extract shapes available under the active product set
   const dynamicShapes = useMemo(() => {
     if (!availableProducts.length) return ALL_SHAPES;
 
@@ -121,7 +119,6 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
     return presentShapes.size > 0 ? Array.from(presentShapes) : ALL_SHAPES;
   }, [availableProducts]);
 
-  // EARLY RETURN PLACED AFTER HOOK DECLARATIONS
   if (!isOpen) return null;
 
   const toggleArrayFilter = (key: keyof FilterState, value: string) => {
@@ -136,7 +133,6 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden font-sans">
-      {/* Background Blur Overlay */}
       <div
         className="fixed inset-0 bg-walters-navy/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
@@ -217,7 +213,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
               </div>
             </div>
 
-            {/* Frame Shape (With Visual Shape Icons) */}
+            {/* Frame Shape */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-walters-navy block font-serif">
@@ -250,9 +246,6 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                             className={`max-h-full max-w-full object-contain transition-transform group-hover:scale-110 ${
                               active ? 'opacity-100' : 'opacity-70'
                             }`}
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
                           />
                         ) : (
                           <div className="w-8 h-3 border border-slate-400 rounded-sm" />
@@ -265,7 +258,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
               </div>
             </div>
 
-            {/* Frame Color (Dynamic Color Swatches) */}
+            {/* Frame Color */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-walters-navy block font-serif">

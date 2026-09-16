@@ -46,7 +46,6 @@ const MINI_BRANDS = [
 
 export const BrandsGrid: React.FC<BrandsGridProps> = ({
   variant = 'full',
-  categorySlug = 'sunglasses',
   onClose,
   brands = [],
 }) => {
@@ -136,20 +135,20 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
     }));
   }, [processedBrands]);
 
-  // MINI BRANDS GRID (Aligned with Shapes section grid parameters)
+  // MINI BRANDS GRID
   if (variant === 'mini') {
     return (
       <div className="w-64 shrink-0">
-        <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
+        <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3 font-serif">
           Top Brands
         </h4>
         <div className="grid grid-cols-2 gap-3">
           {MINI_BRANDS.map((brand) => (
             <Link
               key={brand.slug}
-              to={`/catalog?category=${categorySlug}&brand=${brand.slug}`}
+              to={`/brands/${brand.slug}`}
               onClick={onClose}
-              className="flex items-center justify-center p-3 bg-white border border-neutral-200 rounded-lg hover:border-amber-500 hover:shadow-xs transition-all h-17 group"
+              className="flex items-center justify-center p-3 bg-white border border-neutral-200/80 rounded-xl hover:border-walters-navy hover:shadow-xs transition-all h-17 group"
             >
               <img
                 src={brand.logo}
@@ -159,9 +158,9 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             </Link>
           ))}
           <Link
-            to={`/catalog?category=${categorySlug}&view=brands`}
+            to="/catalog?view=brands"
             onClick={onClose}
-            className="flex items-center justify-center p-3 bg-slate-900 text-white hover:bg-slate-800 transition-all text-xs font-bold tracking-wider uppercase h-17 rounded-lg shadow-xs"
+            className="flex items-center justify-center p-3 bg-walters-navy text-white hover:bg-slate-800 transition-all text-xs font-bold tracking-wider uppercase h-17 rounded-xl shadow-xs"
           >
             Shop All
           </Link>
@@ -177,7 +176,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
         
         {/* TALLER PILL SWITCH */}
         <div className="flex justify-center w-full mb-6">
-          <div className="inline-flex items-center rounded-full border border-neutral-300 bg-white p-1.5 shadow-xs w-full max-w-md">
+          <div className="inline-flex items-center rounded-full border border-neutral-200 bg-white p-1.5 shadow-2xs w-full max-w-md">
             <button
               type="button"
               onClick={() => setActiveType('glasses')}
@@ -189,7 +188,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             >
               Glasses
             </button>
-            <div className="h-5 w-px bg-neutral-300 mx-1" />
+            <div className="h-5 w-px bg-neutral-200 mx-1" />
             <button
               type="button"
               onClick={() => setActiveType('sunglasses')}
@@ -205,12 +204,12 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
         </div>
 
         {/* SUB-FILTER TABS LINE */}
-        <div className="w-full max-w-5xl border-b border-neutral-200 mb-6 flex justify-center">
+        <div className="w-full max-w-5xl border-b border-neutral-200/80 mb-6 flex justify-center">
           <div className="flex space-x-16">
             <button
               type="button"
               onClick={() => setActiveTab('top')}
-              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
+              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-2.5 -mb-px font-serif ${
                 activeTab === 'top'
                   ? 'border-walters-navy text-walters-navy'
                   : 'border-transparent text-neutral-400 hover:text-walters-navy'
@@ -221,7 +220,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-2.5 -mb-px ${
+              className={`text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer pb-2.5 -mb-px font-serif ${
                 activeTab === 'all'
                   ? 'border-walters-navy text-walters-navy'
                   : 'border-transparent text-neutral-400 hover:text-walters-navy'
@@ -242,9 +241,9 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
                 return (
                   <Link
                     key={brand.slug}
-                    to={`/catalog?category=${activeType}&brand=${brand.slug}`}
+                    to={`/brands/${brand.slug}`}
                     onClick={onClose}
-                    className="relative flex items-center justify-center p-4 bg-white border border-neutral-200 rounded-md hover:border-walters-navy hover:shadow-xs transition-all h-28 group overflow-hidden"
+                    className="relative flex items-center justify-center p-4 bg-white border border-neutral-200/80 rounded-xl hover:border-walters-navy hover:shadow-xs transition-all h-28 group overflow-hidden"
                   >
                     {/* Corner Ribbon Badge */}
                     {brand.badge_text && (
@@ -267,7 +266,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
                         className="max-h-12 max-w-[85%] object-contain opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                       />
                     ) : (
-                      <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider text-center group-hover:scale-105 transition-transform">
+                      <span className="text-xs font-bold text-neutral-800 uppercase tracking-wider text-center group-hover:scale-105 transition-transform font-serif">
                         {brand.name}
                       </span>
                     )}
@@ -281,14 +280,14 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-x-6 gap-y-6 max-h-100 overflow-y-auto pr-2 pt-1 no-scrollbar">
               {alphabeticalGrouped.map((group) => (
                 <div key={group.letter} className="space-y-2">
-                  <h5 className="text-[20px] font-normal text-walters-navy border-b border-neutral-200 pb-1">
+                  <h5 className="text-[20px] font-normal text-walters-navy border-b border-neutral-200 pb-1 font-serif">
                     {group.letter}
                   </h5>
                   <ul className="space-y-1.5 text-[13px]">
                     {group.brands.map((b) => (
                       <li key={b.slug} className="relative">
                         <Link
-                          to={`/catalog?category=${activeType}&brand=${b.slug}`}
+                          to={`/brands/${b.slug}`}
                           onClick={onClose}
                           className="text-neutral-700 hover:text-walters-navy transition-colors py-0.5 flex items-center justify-between truncate capitalize font-medium text-[13px]"
                         >

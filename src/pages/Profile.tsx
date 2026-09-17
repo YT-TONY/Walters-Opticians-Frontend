@@ -18,7 +18,6 @@ import {
   Shield,
   HelpCircle,
   Package,
-  KeyRound,
   Phone,
   Mail,
   ArrowRight,
@@ -119,13 +118,6 @@ export const Profile: React.FC = () => {
 
   // Virtual PD Modal State
   const [isPDModalOpen, setIsPDModalOpen] = useState(false);
-
-  // Password Change State
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const sphOptions = useMemo(() => {
     const opts: string[] = [];
@@ -357,26 +349,6 @@ export const Profile: React.FC = () => {
     ];
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(null);
-
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters long.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match.');
-      return;
-    }
-
-    setPasswordSuccess('Password successfully updated!');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-  };
-
   return (
     <div className="min-h-screen bg-walters-cream py-8 px-4 sm:px-6 lg:px-8 font-sans text-walters-charcoal antialiased">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -440,7 +412,7 @@ export const Profile: React.FC = () => {
                 }`}
               >
                 <Shield className="w-4 h-4" />
-                <span>Account & Security</span>
+                <span>Account Details</span>
               </button>
 
               <button
@@ -827,7 +799,7 @@ export const Profile: React.FC = () => {
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <h3 className="font-sans text-lg font-bold tracking-tight text-walters-navy">
-                  Account & Security Settings
+                  Account Details
                 </h3>
 
                 <div className="bg-white p-6 rounded-3xl border border-walters-border shadow-2xs space-y-4">
@@ -846,69 +818,6 @@ export const Profile: React.FC = () => {
                       <strong className="text-walters-navy text-sm font-semibold">{user?.email || 'N/A'}</strong>
                     </div>
                   </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl border border-walters-border shadow-2xs space-y-4">
-                  <h4 className="font-sans font-bold text-base text-walters-navy flex items-center space-x-2">
-                    <KeyRound className="w-4 h-4 text-walters-gold" />
-                    <span>Change Password</span>
-                  </h4>
-
-                  {passwordSuccess && (
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
-                      {passwordSuccess}
-                    </div>
-                  )}
-
-                  {passwordError && (
-                    <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold">
-                      {passwordError}
-                    </div>
-                  )}
-
-                  <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-                    <div>
-                      <label className="block text-xs font-semibold text-walters-navy mb-1">Current Password</label>
-                      <input
-                        type="password"
-                        required
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full bg-walters-cream border border-walters-border rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-walters-navy"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-walters-navy mb-1">New Password</label>
-                      <input
-                        type="password"
-                        required
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full bg-walters-cream border border-walters-border rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-walters-navy"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-walters-navy mb-1">
-                        Confirm New Password
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-walters-cream border border-walters-border rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-walters-navy"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="px-6 py-2.5 bg-walters-navy text-white rounded-xl text-xs font-semibold hover:bg-walters-gold hover:text-walters-navy transition-all cursor-pointer"
-                    >
-                      Update Password
-                    </button>
-                  </form>
                 </div>
               </div>
             )}

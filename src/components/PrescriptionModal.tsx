@@ -1,5 +1,4 @@
-// src/components/PrescriptionModal.tsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   X, 
   Check, 
@@ -10,11 +9,15 @@ import {
   UploadCloud,
   Calendar,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  BookmarkPlus,
+  Eye
 } from 'lucide-react';
 import { VirtualPDModal } from './VirtualPDModal';
 import { adminApi } from '../api/admin';
+import { apiClient } from '../api/client';
 import type { GlassesPrescriptionData } from '../types';
+import type { SavedPrescription } from '../types/prescription';
 import type { StoreSettingsRates } from '../types/admin';
 
 export interface LensConfiguration {
@@ -73,10 +76,17 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
   frameName,
   framePrice,
 }) => {
-  // Step Tracker (1: Vision, 2: Prescription, 3: Style, 4: Thickness, 5: Coating, 6: Summary)
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // Dynamic Store Rates
+  const [isSavePromptOpen, setIsSavePromptOpen] = useState<boolean>(false);
+  const [saveLabel, setSaveLabel] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Saved Prescriptions Sync
+  const [savedPrescriptions, setSavedPrescriptions] = useState<SavedPrescription[]>([]);
+  const [, setLoadingSavedRx] = useState<boolean>(false);
+  const [selectedSavedId, setSelectedSavedId] = useState<number | null>(null);
+
   const [storeRates, setStoreRates] = useState<StoreSettingsRates>({
     standard_lens_fee: 0,
     eye_exam_fee: 30,
@@ -86,11 +96,9 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
     low_stock_threshold: 8,
   });
 
-  // Step 1: Vision Type
   const [visionType, setVisionType] = useState<LensConfiguration['visionType']>('single_vision');
 
-  // Step 2 Modes & Inputs
-  const [rxInputMode, setRxInputMode] = useState<'manual' | 'upload' | 'book'>('manual');
+  const [rxInputMode, setRxInputMode] = useState<'manual' | 'upload' | 'book' | 'saved'>('manual');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const [odSph, setOdSph] = useState<string>('0.00');
@@ -103,22 +111,34 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
   const [osAxis, setOsAxis] = useState<string>('180');
   const [osAdd, setOsAdd] = useState<string>('0.00');
 
-  const [pd, setPd] = useState<string>('63');
+  const [pd, setPd] = useState<string>('63.0');
   const [isPDModalOpen, setIsPDModalOpen] = useState<boolean>(false);
 
-  // Step 3: Lens Style
   const [lensStyle, setLensStyle] = useState<LensConfiguration['lensStyle']>('clear');
-
-  // Step 4: Lens Index
   const [lensIndex, setLensIndex] = useState<LensConfiguration['lensIndex']>('1.50');
-
-  // Step 5: Coating Package
   const [coatingTier, setCoatingTier] = useState<LensConfiguration['coatingTier']>('standard');
 
-  // Fetch Store Rates
+  const formatDiopterValue = (val: number | null | undefined): string => {
+    if (val === null || val === undefined) return '0.00';
+    const num = Number(val);
+    return num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2);
+  };
+
+  const applySavedPrescription = useCallback((rx: SavedPrescription) => {
+    setOdSph(formatDiopterValue(rx.right_sph));
+    setOdCyl(formatDiopterValue(rx.right_cyl));
+    setOdAxis(String(rx.right_axis ?? 180));
+    setOsSph(formatDiopterValue(rx.left_sph));
+    setOsCyl(formatDiopterValue(rx.left_cyl));
+    setOsAxis(String(rx.left_axis ?? 180));
+    setPd(String(rx.pd_mm ?? 63.0));
+    setSelectedSavedId(rx.id);
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
+
     const loadRates = async () => {
       try {
         const res = await adminApi.getStoreSettings();
@@ -129,28 +149,64 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
         console.warn('Using default store pricing rates:', err);
       }
     };
+
+    const loadSavedPrescriptions = async () => {
+      setLoadingSavedRx(true);
+      try {
+        const res = await apiClient.get<SavedPrescription[]>('/prescriptions/me');
+        if (isMounted && res.data) {
+          setSavedPrescriptions(res.data);
+          const defaultRx = res.data.find((rx) => rx.is_default);
+          if (defaultRx) {
+            applySavedPrescription(defaultRx);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch user saved prescriptions:', err);
+      } finally {
+        if (isMounted) setLoadingSavedRx(false);
+      }
+    };
+
     loadRates();
+    loadSavedPrescriptions();
+
     return () => { isMounted = false; };
-  }, [isOpen]);
+  }, [isOpen, applySavedPrescription]);
 
   const showAddColumn = useMemo(() => {
     return visionType === 'bifocal' || visionType === 'varifocal';
   }, [visionType]);
 
-  const diopterOptions = useMemo(() => {
-    const options: number[] = [];
-    for (let i = -10.00; i <= 10.00; i += 0.25) {
-      options.push(Math.round(i * 100) / 100);
+  const sphOptions = useMemo(() => {
+    const opts: string[] = [];
+    for (let v = -14.00; v <= 11.75; v += 0.25) {
+      const val = Math.round(v * 100) / 100;
+      opts.push(val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2));
     }
-    return options;
+    return opts;
+  }, []);
+
+  const cylOptions = useMemo(() => {
+    const opts: string[] = [];
+    for (let v = -6.00; v <= 6.00; v += 0.25) {
+      const val = Math.round(v * 100) / 100;
+      opts.push(val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2));
+    }
+    return opts;
+  }, []);
+
+  const axisOptions = useMemo(() => {
+    return Array.from({ length: 180 }, (_, i) => String(i + 1));
   }, []);
 
   const addOptions = useMemo(() => {
-    const options: number[] = [];
-    for (let i = 0.00; i <= 4.00; i += 0.25) {
-      options.push(Math.round(i * 100) / 100);
+    const opts: string[] = [];
+    for (let v = 0.00; v <= 4.00; v += 0.25) {
+      const val = Math.round(v * 100) / 100;
+      opts.push(val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2));
     }
-    return options;
+    return opts;
   }, []);
 
   const visionTypeOptions: VisionTypeOption[] = useMemo(() => [
@@ -223,7 +279,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
   if (!isOpen) return null;
 
-  const formatDiopter = (val: number) => (val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2));
   const formatBadgePrice = (val: number) => (val === 0 ? 'Included' : `+£${val.toFixed(2)}`);
 
   const handleNextStep = () => {
@@ -248,18 +303,18 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
     }
   };
 
-  const handleFinalSubmit = () => {
+  const constructPayload = () => {
     const prescription: GlassesPrescriptionData = {
       odSphere: Number(odSph) || 0,
       odCyl: Number(odCyl) || 0,
-      odAxis: Number(odAxis) || 0,
+      odAxis: Number(odAxis) || 180,
       osSphere: Number(osSph) || 0,
       osCyl: Number(osCyl) || 0,
-      osAxis: Number(osAxis) || 0,
-      pd: Number(pd) || 63,
+      osAxis: Number(osAxis) || 180,
+      pd: Number(pd) || 63.0,
       odAdd: showAddColumn ? Number(odAdd) || 0 : 0,
       osAdd: showAddColumn ? Number(osAdd) || 0 : 0,
-      uploadedFileUrl: uploadedFile ? uploadedFile.name : undefined
+      uploadedFileUrl: uploadedFile ? uploadedFile.name : undefined,
     };
 
     const config: LensConfiguration = {
@@ -269,19 +324,57 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
       lensIndex,
       coatingTier,
       totalLensUpgradePrice: pricingAddons.totalUpgrade,
-      uploadedFileUrl: uploadedFile ? uploadedFile.name : undefined
+      uploadedFileUrl: uploadedFile ? uploadedFile.name : undefined,
     };
 
+    return { prescription, config };
+  };
+
+  const executeFinalSubmit = () => {
+    const { prescription, config } = constructPayload();
     if (onConfirm) onConfirm(prescription, config);
     else if (onSave) onSave(prescription, config);
+    setIsSavePromptOpen(false);
+  };
+
+  const handleFinalSubmitClick = () => {
+    if (visionType === 'non_prescription' || rxInputMode === 'book') {
+      executeFinalSubmit();
+    } else {
+      setSaveLabel(`${frameName} Prescription`);
+      setIsSavePromptOpen(true);
+    }
+  };
+
+  const handleSaveToAccountAndSubmit = async () => {
+    setIsSaving(true);
+    const { prescription } = constructPayload();
+    try {
+      await apiClient.post('/prescriptions', {
+        title: saveLabel || 'My Saved Glasses Prescription',
+        right_sph: prescription.odSphere,
+        right_cyl: prescription.odCyl,
+        right_axis: prescription.odAxis,
+        left_sph: prescription.osSphere,
+        left_cyl: prescription.osCyl,
+        left_axis: prescription.osAxis,
+        pd_mm: prescription.pd,
+        file_url: prescription.uploadedFileUrl || null,
+        is_default: false,
+      });
+    } catch (err) {
+      console.error('Failed to save prescription to user account:', err);
+    } finally {
+      setIsSaving(false);
+      executeFinalSubmit();
+    }
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-walters-navy/60 backdrop-blur-sm p-4 sm:p-6">
-        <div className="bg-white rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200/80 flex flex-col max-h-[92vh] font-sans text-walters-navy animate-in fade-in zoom-in-95 duration-200">
-          
-          {/* HEADER */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-walters-navy/60 backdrop-blur-xs p-4 sm:p-6 font-sans text-walters-navy">
+        <div className="bg-white rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200/80 flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+
           <div className="flex justify-between items-start pb-5 border-b border-slate-100 shrink-0">
             <div className="space-y-1">
               <span className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold block">
@@ -301,13 +394,12 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             </button>
           </div>
 
-          {/* MINIMALIST PROGRESS STEP BAR */}
           <div className="pt-6 pb-4 shrink-0">
             <div className="grid grid-cols-6 gap-2">
               {[1, 2, 3, 4, 5, 6].map((stepNum) => {
                 const isActive = stepNum === currentStep;
-                const isCompleted = stepNum < currentStep;
                 const isSkipped = stepNum === 2 && visionType === 'non_prescription';
+                const isCompleted = stepNum < currentStep && !isSkipped;
 
                 return (
                   <div key={stepNum} className="space-y-2">
@@ -315,10 +407,10 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                       className={`h-1 rounded-full transition-all duration-300 ${
                         isActive
                           ? 'bg-walters-navy'
-                          : isCompleted
-                          ? 'bg-walters-navy/40'
                           : isSkipped
                           ? 'bg-slate-100'
+                          : isCompleted
+                          ? 'bg-walters-navy/40'
                           : 'bg-slate-200'
                       }`}
                     />
@@ -338,10 +430,8 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             </div>
           </div>
 
-          {/* STEP CONTENT CONTAINER */}
           <div className="py-4 overflow-y-auto grow space-y-6 px-1">
-            
-            {/* STEP 1: VISION TYPE */}
+
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div className="border-b border-slate-100 pb-2">
@@ -373,13 +463,24 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </div>
             )}
 
-            {/* STEP 2: PRESCRIPTION ENTRY / UPLOAD / BOOK */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                
-                {/* SUB-NAV MODE SWITCHER */}
+
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <div className="flex bg-slate-100/80 p-1 rounded-xl gap-1">
+                    {savedPrescriptions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setRxInputMode('saved')}
+                        className={`px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                          rxInputMode === 'saved' ? 'bg-white text-walters-navy shadow-2xs' : 'text-slate-500 hover:text-walters-navy'
+                        }`}
+                      >
+                        <Eye className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Saved Prescriptions ({savedPrescriptions.length})</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => setRxInputMode('manual')}
@@ -424,7 +525,50 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                   )}
                 </div>
 
-                {/* MODE 1: MANUAL ENTRY */}
+                {rxInputMode === 'saved' && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-walters-navy uppercase tracking-wider">
+                      Select a Saved Optical Prescription
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {savedPrescriptions.map((rx) => (
+                        <div
+                          key={rx.id}
+                          className={`p-4 rounded-2xl border transition-all space-y-2 cursor-pointer ${
+                            selectedSavedId === rx.id
+                              ? 'border-walters-navy bg-walters-navy/5 ring-1 ring-walters-navy shadow-xs'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                          onClick={() => {
+                            applySavedPrescription(rx);
+                            setRxInputMode('manual');
+                          }}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-xs text-walters-navy">{rx.title}</span>
+                            {rx.is_default && (
+                              <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-mono text-[11px] text-slate-600">
+                            OD: {formatDiopterValue(rx.right_sph)} / {formatDiopterValue(rx.right_cyl)} / {rx.right_axis ?? 180}°
+                            <br />
+                            OS: {formatDiopterValue(rx.left_sph)} / {formatDiopterValue(rx.left_cyl)} / {rx.left_axis ?? 180}°
+                          </p>
+                          <button
+                            type="button"
+                            className="w-full py-1.5 bg-walters-navy text-white text-xs font-semibold rounded-xl hover:bg-walters-gold hover:text-walters-navy transition-all"
+                          >
+                            Use {rx.title}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {rxInputMode === 'manual' && (
                   <div className="space-y-5">
                     <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
@@ -439,7 +583,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-normal">
-                          {/* OD / RIGHT */}
                           <tr>
                             <td className="p-3.5 font-semibold text-walters-navy">OD (Right)</td>
                             <td className="p-2.5">
@@ -448,8 +591,8 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                                 onChange={(e) => setOdSph(e.target.value)}
                                 className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
                               >
-                                {diopterOptions.map((v) => (
-                                  <option key={`odSph-${v}`} value={v.toString()}>{formatDiopter(v)}</option>
+                                {sphOptions.map((v) => (
+                                  <option key={`odSph-${v}`} value={v}>{v}</option>
                                 ))}
                               </select>
                             </td>
@@ -459,20 +602,21 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                                 onChange={(e) => setOdCyl(e.target.value)}
                                 className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
                               >
-                                {diopterOptions.map((v) => (
-                                  <option key={`odCyl-${v}`} value={v.toString()}>{formatDiopter(v)}</option>
+                                {cylOptions.map((v) => (
+                                  <option key={`odCyl-${v}`} value={v}>{v}</option>
                                 ))}
                               </select>
                             </td>
                             <td className="p-2.5">
-                              <input
-                                type="number"
-                                min="0"
-                                max="180"
+                              <select
                                 value={odAxis}
                                 onChange={(e) => setOdAxis(e.target.value)}
                                 className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
-                              />
+                              >
+                                {axisOptions.map((v) => (
+                                  <option key={`odAxis-${v}`} value={v}>{v}°</option>
+                                ))}
+                              </select>
                             </td>
                             {showAddColumn && (
                               <td className="p-2.5">
@@ -482,14 +626,13 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                                   className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
                                 >
                                   {addOptions.map((v) => (
-                                    <option key={`odAdd-${v}`} value={v.toString()}>{formatDiopter(v)}</option>
+                                    <option key={`odAdd-${v}`} value={v}>{v}</option>
                                   ))}
                                 </select>
                               </td>
                             )}
                           </tr>
 
-                          {/* OS / LEFT */}
                           <tr>
                             <td className="p-3.5 font-semibold text-walters-navy">OS (Left)</td>
                             <td className="p-2.5">
@@ -498,8 +641,8 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                                 onChange={(e) => setOsSph(e.target.value)}
                                 className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
                               >
-                                {diopterOptions.map((v) => (
-                                  <option key={`osSph-${v}`} value={v.toString()}>{formatDiopter(v)}</option>
+                                {sphOptions.map((v) => (
+                                  <option key={`osSph-${v}`} value={v}>{v}</option>
                                 ))}
                               </select>
                             </td>
@@ -509,20 +652,21 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                                 onChange={(e) => setOsCyl(e.target.value)}
                                 className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
                               >
-                                {diopterOptions.map((v) => (
-                                  <option key={`osCyl-${v}`} value={v.toString()}>{formatDiopter(v)}</option>
+                                {cylOptions.map((v) => (
+                                  <option key={`osCyl-${v}`} value={v}>{v}</option>
                                 ))}
                               </select>
                             </td>
                             <td className="p-2.5">
-                              <input
-                                type="number"
-                                min="0"
-                                max="180"
+                              <select
                                 value={osAxis}
                                 onChange={(e) => setOsAxis(e.target.value)}
                                 className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
-                              />
+                              >
+                                {axisOptions.map((v) => (
+                                  <option key={`osAxis-${v}`} value={v}>{v}°</option>
+                                ))}
+                              </select>
                             </td>
                             {showAddColumn && (
                               <td className="p-2.5">
@@ -532,7 +676,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                                   className="w-full p-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs font-mono focus:border-walters-navy focus:outline-none"
                                 >
                                   {addOptions.map((v) => (
-                                    <option key={`osAdd-${v}`} value={v.toString()}>{formatDiopter(v)}</option>
+                                    <option key={`osAdd-${v}`} value={v}>{v}</option>
                                   ))}
                                 </select>
                               </td>
@@ -566,7 +710,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                   </div>
                 )}
 
-                {/* MODE 2: FILE UPLOAD */}
                 {rxInputMode === 'upload' && (
                   <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center space-y-4 bg-slate-50/40">
                     <div className="w-12 h-12 rounded-full bg-walters-navy/5 text-walters-navy flex items-center justify-center mx-auto">
@@ -576,7 +719,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                       <h4 className="text-sm font-semibold text-walters-navy">Upload Optical Prescription</h4>
                       <p className="text-xs text-slate-500 font-light mt-1">Upload a photo or PDF file from your optician.</p>
                     </div>
-                    <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-walters-navy text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shadow-2xs">
+                    <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-walters-navy text-white text-xs font-medium rounded-xl hover:bg-slate-808 transition-colors cursor-pointer shadow-2xs">
                       <span>Browse File</span>
                       <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} className="hidden" />
                     </label>
@@ -589,7 +732,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                   </div>
                 )}
 
-                {/* MODE 3: BOOK EYE EXAM */}
                 {rxInputMode === 'book' && (
                   <div className="border border-slate-200 rounded-xl p-6 bg-slate-50/50 space-y-4">
                     <div className="flex items-start gap-4">
@@ -618,7 +760,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </div>
             )}
 
-            {/* STEP 3: LENS STYLE */}
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="border-b border-slate-100 pb-2">
@@ -650,7 +791,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </div>
             )}
 
-            {/* STEP 4: LENS THICKNESS */}
             {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -687,7 +827,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </div>
             )}
 
-            {/* STEP 5: COATING PACKAGE */}
             {currentStep === 5 && (
               <div className="space-y-4">
                 <div className="border-b border-slate-100 pb-2">
@@ -719,7 +858,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </div>
             )}
 
-            {/* STEP 6: SUMMARY REVIEW */}
             {currentStep === 6 && (
               <div className="space-y-4">
                 <div className="border-b border-slate-100 pb-2">
@@ -764,7 +902,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
           </div>
 
-          {/* FOOTER ACTIONS */}
           <div className="pt-5 border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
             {currentStep > 1 ? (
               <button
@@ -797,7 +934,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={handleFinalSubmit}
+                onClick={handleFinalSubmitClick}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-walters-navy text-white rounded-xl text-xs font-medium uppercase tracking-wider hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
               >
                 <Check className="w-4 h-4" />
@@ -809,7 +946,6 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
         </div>
       </div>
 
-      {/* VIRTUAL PD SCANNER OVERLAY */}
       <VirtualPDModal
         isOpen={isPDModalOpen}
         onClose={() => setIsPDModalOpen(false)}
@@ -818,6 +954,51 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
           setIsPDModalOpen(false);
         }}
       />
+
+      {isSavePromptOpen && (
+        <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 font-sans text-walters-navy">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-2xl">
+            <div className="flex items-center space-x-3 text-walters-navy">
+              <div className="p-3 bg-slate-100 rounded-2xl border border-slate-200">
+                <BookmarkPlus className="w-6 h-6 text-walters-navy" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-walters-navy">Save Prescription to Account?</h3>
+                <p className="text-xs text-slate-500">Store these parameters for quick one-click orders next time.</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-walters-navy mb-1">Prescription Label / Title</label>
+              <input
+                type="text"
+                value={saveLabel}
+                onChange={(e) => setSaveLabel(e.target.value)}
+                placeholder="e.g. Daily Glasses RX"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-walters-navy"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={executeFinalSubmit}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                No, Thanks
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={handleSaveToAccountAndSubmit}
+                className="px-5 py-2 bg-walters-navy text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                {isSaving ? 'Saving...' : 'Save & Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -1,6 +1,7 @@
-// src/context/AuthContext.ts
+//src/context/AuthContext.ts
+
 import { createContext } from 'react';
-import {  type UserProfile, type LoginPayload, type SignupPayload } from '../api/auth';
+import { type UserProfile, type LoginPayload, type SignupPayload } from '../api/auth';
 
 export interface AuthContextType {
   user: UserProfile | null;
@@ -9,6 +10,7 @@ export interface AuthContextType {
   loading: boolean;
   login: (credentials: LoginPayload) => Promise<UserProfile>;
   register: (payload: SignupPayload) => Promise<void>;
+  setAuthData: (token: string, user: UserProfile) => void;
   logout: () => void;
 }
 

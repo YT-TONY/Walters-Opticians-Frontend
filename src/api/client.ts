@@ -12,28 +12,59 @@ export const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Attach Bearer Token
+// Active Request Tracker for Global Loading Dock
+let activeRequests = 0;
+
+const notifyLoadingState = () => {
+  window.dispatchEvent(
+    new CustomEvent('api-loading-change', { detail: { isLoading: activeRequests > 0 } })
+  );
+};
+
+// Request Interceptor: Attach Token & Start Loading
 apiClient.interceptors.request.use(
   (config) => {
+    activeRequests++;
+    notifyLoadingState();
+
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    activeRequests = Math.max(0, activeRequests - 1);
+    notifyLoadingState();
+    return Promise.reject(error);
+  }
 );
 
-// Response Interceptor: Handle Unauthenticated Requests
+// Response Interceptor: Stop Loading & Handle Errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    activeRequests = Math.max(0, activeRequests - 1);
+    notifyLoadingState();
+    return response;
+  },
   (error) => {
+    activeRequests = Math.max(0, activeRequests - 1);
+    notifyLoadingState();
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem(AUTH_TOKEN_KEY);
 
-      // Prevent redirect loops or page resets during failed logins
-      const isAuthPage = ['/login', '/register'].includes(window.location.pathname);
-      if (!isAuthPage) {
+      const publicAuthRoutes = [
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+        '/verify-email',
+        '/complete-profile',
+      ];
+
+      const isPublicAuthPage = publicAuthRoutes.includes(window.location.pathname);
+      if (!isPublicAuthPage) {
         window.location.href = '/login';
       }
     }

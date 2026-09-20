@@ -1,48 +1,70 @@
 // src/components/LoadingDock.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface LoadingDockProps {
   /** Mode: 'pulse' for heartbeat expansion, or 'flip' for slow-mo Y-axis rotation */
   mode?: 'pulse' | 'flip';
+  /** Delay in milliseconds before showing the loader (prevents flickering on fast requests) */
+  delayMs?: number;
 }
 
-export const LoadingDock: React.FC<LoadingDockProps> = ({ mode = 'pulse' }) => {
-  const [isLoading, setIsLoading] = useState(false);
+export const LoadingDock: React.FC<LoadingDockProps> = ({ mode = 'pulse', delayMs = 500 }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isApiLoadingRef = useRef(false);
 
   useEffect(() => {
     const handleLoadingChange = (e: Event) => {
       const customEvent = e as CustomEvent<{ isLoading: boolean }>;
-      setIsLoading(customEvent.detail.isLoading);
+      const isCurrentlyLoading = customEvent.detail.isLoading;
+      isApiLoadingRef.current = isCurrentlyLoading;
+
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+
+      if (isCurrentlyLoading) {
+        timerRef.current = setTimeout(() => {
+          if (isApiLoadingRef.current) {
+            setIsVisible(true);
+          }
+        }, delayMs);
+      } else {
+        setIsVisible(false);
+      }
     };
 
     window.addEventListener('api-loading-change', handleLoadingChange);
     return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
       window.removeEventListener('api-loading-change', handleLoadingChange);
     };
-  }, []);
-
-  if (!isLoading) return null;
+  }, [delayMs]);
 
   return (
-    <div className="fixed inset-0 z-9999 flex flex-col items-center justify-center bg-walters-navy/95 backdrop-blur-md transition-all duration-500 font-sans">
-      
-      {/* Inline Keyframes for Pulse & Flip Animations */}
+    <div
+      className={`fixed inset-0 z-9999 flex items-center justify-center bg-walters-navy/60 backdrop-blur-md transition-opacity duration-300 font-sans p-4 ${
+        isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+      }`}
+    >
+      {/* Inline Keyframes */}
       <style>{`
         @keyframes heartbeat-glow {
           0%, 100% {
-            transform: scale(0.95);
-            opacity: 0.25;
+            transform: scale(0.9);
+            opacity: 0.3;
           }
           50% {
-            transform: scale(1.35);
-            opacity: 0.75;
+            transform: scale(1.3);
+            opacity: 0.8;
           }
         }
 
         @keyframes heartbeat-logo {
           0%, 100% {
-            transform: scale(0.98);
+            transform: scale(0.96);
           }
           30% {
             transform: scale(1.06);
@@ -68,11 +90,11 @@ export const LoadingDock: React.FC<LoadingDockProps> = ({ mode = 'pulse' }) => {
         }
 
         .animate-heartbeat-glow {
-          animation: heartbeat-glow 2.4s ease-in-out infinite;
+          animation: heartbeat-glow 2.2s ease-in-out infinite;
         }
 
         .animate-heartbeat-logo {
-          animation: heartbeat-logo 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          animation: heartbeat-logo 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
 
         .animate-y-flip {
@@ -80,46 +102,40 @@ export const LoadingDock: React.FC<LoadingDockProps> = ({ mode = 'pulse' }) => {
         }
       `}</style>
 
-      {/* Main Centered Animation Box */}
-      <div className="relative flex flex-col items-center justify-center p-8">
-        
+      {/* Solid High-Contrast Luxury Dark Card Container */}
+      <div className="relative flex flex-col items-center justify-center px-10 py-9 rounded-3xl bg-walters-navy border border-walters-gold/40 shadow-[0_20px_60px_rgba(0,0,0,0.6)] text-center min-w-70">
         {/* Glowing Pulsing Gold Aura Ring */}
-        <div className="absolute w-48 h-48 rounded-full bg-linear-to-tr from-walters-gold/40 via-amber-300/30 to-yellow-500/10 blur-2xl animate-heartbeat-glow pointer-events-none" />
+        <div className="absolute w-40 h-40 rounded-full bg-linear-to-tr from-walters-gold/50 via-amber-300/40 to-yellow-500/20 blur-2xl animate-heartbeat-glow pointer-events-none" />
 
-        {/* Walters Monogram / Brand Icon */}
+        {/* Glasses Icon Badge */}
         <div
-          className={`relative z-10 flex items-center justify-center w-24 h-24 rounded-full bg-white/10 border border-walters-gold/40 shadow-[0_0_50px_rgba(197,162,101,0.3)] backdrop-blur-sm ${
+          className={`relative z-10 flex items-center justify-center w-20 h-20 rounded-full bg-slate-900/80 border-2 border-walters-gold shadow-[0_0_30px_rgba(197,162,101,0.4)] backdrop-blur-md ${
             mode === 'pulse' ? 'animate-heartbeat-logo' : 'animate-y-flip'
           }`}
         >
-          {/* Glasses Frame Silhouette Icon */}
           <svg
-            className="w-12 h-12 text-walters-gold drop-shadow-[0_2px_8px_rgba(197,162,101,0.6)]"
+            className="w-10 h-10 text-walters-gold drop-shadow-[0_2px_10px_rgba(197,162,101,0.8)]"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            {/* Bridge */}
             <path d="M8 12a4 4 0 0 1 8 0" />
-            {/* Left Lens */}
             <circle cx="6" cy="13" r="4" />
-            {/* Right Lens */}
             <circle cx="18" cy="13" r="4" />
-            {/* Temples */}
             <path d="M2 11l1.5 2" />
             <path d="M22 11l-1.5 2" />
           </svg>
         </div>
 
-        {/* Brand Text & Status Indicator */}
-        <div className="relative z-10 mt-8 text-center space-y-2">
-          <h2 className="font-serif text-lg tracking-[0.3em] uppercase text-white font-normal">
+        {/* High-Contrast Brand Typography */}
+        <div className="relative z-10 mt-6 space-y-1.5">
+          <h2 className="font-serif text-sm tracking-[0.25em] uppercase text-white font-bold drop-shadow-md">
             Walters Opticians
           </h2>
-          <p className="text-xs text-walters-gold/80 tracking-widest font-light animate-pulse">
+          <p className="text-[11px] text-walters-gold font-semibold tracking-wider animate-pulse drop-shadow-xs">
             Crafting precision optics...
           </p>
         </div>

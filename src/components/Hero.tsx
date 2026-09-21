@@ -31,7 +31,7 @@ export const Hero: React.FC = () => {
             {/* CTA Button & Details */}
             <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-8">
               <Link
-                to="/frames"
+                to="/catalog"
                 className="bg-walters-gold text-walters-navy font-semibold text-base px-9 py-4 rounded-full opacity-100 hover:opacity-70 transition-opacity duration-200 shadow-xl"
               >
                 Shop the collection

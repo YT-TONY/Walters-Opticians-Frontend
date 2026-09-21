@@ -28,72 +28,31 @@ import { apiClient } from '../api/client';
 import type { Brand } from '../context/Category';
 
 const FALLBACK_BRANDS = [
-  'Ray-Ban',
-  'Tiffany & Co.',
-  'Oakley',
-  'Gucci',
-  'Prada',
-  'Tom Ford',
-  'Persol',
-  'Versace',
-  'Burberry',
-  'Chanel',
-  'Dior',
-  'Cartier',
-  'Bottega Veneta',
-  'Bulgari',
-  'Calvin Klein',
-  'Dolce & Gabbana',
-  'Emporio Armani',
-  'Hugo Boss',
-  'Jimmy Choo',
-  'Lacoste',
-  'Marc Jacobs',
-  'Michael Kors',
-  'Nike',
-  'Polo Ralph Lauren',
-  'Saint Laurent',
-  'Ted Baker'
+  'Ray-Ban', 'Tiffany & Co.', 'Oakley', 'Gucci', 'Prada', 'Tom Ford',
+  'Persol', 'Versace', 'Burberry', 'Chanel', 'Dior', 'Cartier', 'Bottega Veneta'
 ];
 
 const GENERIC_OPTICAL_TYPES = [
-  'Aviator',
-  'Wayfarer',
-  'Cat Eye',
-  'Round Frames',
-  'Square Frames',
-  'Titanium Frames',
-  'Blue Light Lenses',
-  'Single Vision',
-  'Varifocal Lenses',
-  'Reading Glasses',
-  'Polarized Sunglasses'
+  'Aviator', 'Wayfarer', 'Cat Eye', 'Round Frames', 'Square Frames',
+  'Titanium Frames', 'Blue Light Lenses', 'Single Vision', 'Varifocal Lenses',
+  'Reading Glasses', 'Polarized Sunglasses'
 ];
 
 const TRENDING_INITIAL = [
-  'Ray-Ban Aviator',
-  'Titanium Frames',
-  'Blue Light Lenses',
-  'Designer Sunglasses',
-  'Reading Glasses'
+  'Ray-Ban Aviator', 'Titanium Frames', 'Blue Light Lenses',
+  'Designer Sunglasses', 'Reading Glasses'
 ];
 
-// Strip non-alphanumeric characters ("ray ban" -> "rayban")
 const normalizeStr = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-// Levenshtein Distance matrix calculation
 const getLevenshteinDistance = (a: string, b: string): number => {
   if (a === b) return 0;
   if (!a.length) return b.length;
   if (!b.length) return a.length;
 
   const matrix: number[][] = [];
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
 
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
@@ -123,7 +82,6 @@ export const Navbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Lazy Initial State for LocalStorage History
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('walters_search_history') || '[]');
@@ -145,10 +103,9 @@ export const Navbar: React.FC = () => {
   const totalItemCount = cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
   const prevCountRef = useRef(totalItemCount);
 
-  // DYNAMICALLY EXTRACT ALL CONTACT LENS BRAND IDs & SLUGS FROM CATEGORY TREE
+  // Extract contact lens brands
   const contactBrandIdentifiers = useMemo(() => {
     const identifiers = new Set<string | number>();
-
     const contactCategory = categories.find(
       (cat) => cat.slug?.toLowerCase().includes('contact') || cat.name?.toLowerCase().includes('contact')
     );
@@ -171,7 +128,6 @@ export const Navbar: React.FC = () => {
     return identifiers;
   }, [categories]);
 
-  // Helper check for contact brands
   const isContactBrand = useCallback(
     (brand: Brand): boolean => {
       return (
@@ -182,18 +138,12 @@ export const Navbar: React.FC = () => {
     [contactBrandIdentifiers]
   );
 
-  // COMPUTED DYNAMIC USER INITIAL FOR AVATAR
   const userInitial = useMemo(() => {
-    if (user?.full_name?.trim()) {
-      return user.full_name.trim().charAt(0).toUpperCase();
-    }
-    if (user?.email?.trim()) {
-      return user.email.trim().charAt(0).toUpperCase();
-    }
+    if (user?.full_name?.trim()) return user.full_name.trim().charAt(0).toUpperCase();
+    if (user?.email?.trim()) return user.email.trim().charAt(0).toUpperCase();
     return 'U';
   }, [user]);
 
-  // FETCH ALL BRANDS FROM DATABASE API
   useEffect(() => {
     let isMounted = true;
     const fetchBrands = async () => {
@@ -207,13 +157,9 @@ export const Navbar: React.FC = () => {
       }
     };
     fetchBrands();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
-  // Filter Database Brands that match search query EXCLUDING Contact Lens Brands dynamically
   const matchingBrands = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return [];
@@ -223,14 +169,10 @@ export const Navbar: React.FC = () => {
     );
   }, [databaseBrands, searchQuery, isContactBrand]);
 
-  // DYNAMIC SEARCH TERMS POOL
   const searchTermsIndex = useMemo(() => {
     const termSet = new Set<string>();
-
     if (databaseBrands.length > 0) {
-      databaseBrands.forEach((b) => {
-        if (b.name) termSet.add(b.name);
-      });
+      databaseBrands.forEach((b) => { if (b.name) termSet.add(b.name); });
     } else {
       FALLBACK_BRANDS.forEach((b) => termSet.add(b));
     }
@@ -239,18 +181,14 @@ export const Navbar: React.FC = () => {
       if (cat.name) termSet.add(cat.name);
       cat.subcategories?.forEach((sub) => {
         if (sub.name) termSet.add(sub.name);
-        sub.brands?.forEach((b) => {
-          if (b.name) termSet.add(b.name);
-        });
+        sub.brands?.forEach((b) => { if (b.name) termSet.add(b.name); });
       });
     });
 
     GENERIC_OPTICAL_TYPES.forEach((type) => termSet.add(type));
-
     return Array.from(termSet);
   }, [databaseBrands, categories]);
 
-  // ENHANCED LIVE SUGGESTIONS & FUZZY MATCHING
   const { autoSuggestions, didYouMean, isFuzzyResult } = useMemo(() => {
     const cleanQuery = normalizeStr(searchQuery);
     if (!cleanQuery) return { autoSuggestions: [], didYouMean: null, isFuzzyResult: false };
@@ -258,17 +196,12 @@ export const Navbar: React.FC = () => {
     const exactMatches = searchTermsIndex.filter((term) => {
       const cleanTerm = normalizeStr(term);
       if (cleanTerm.includes(cleanQuery)) return true;
-
       const words = term.toLowerCase().split(/[^a-z0-9]+/);
       return words.some((w) => w.startsWith(cleanQuery));
     });
 
     if (exactMatches.length > 0) {
-      return { 
-        autoSuggestions: exactMatches.slice(0, 8), 
-        didYouMean: null, 
-        isFuzzyResult: false 
-      };
+      return { autoSuggestions: exactMatches.slice(0, 8), didYouMean: null, isFuzzyResult: false };
     }
 
     const queryTokens = searchQuery.toLowerCase().trim().split(/\s+/);
@@ -277,7 +210,6 @@ export const Navbar: React.FC = () => {
     for (const term of searchTermsIndex) {
       const cleanTerm = normalizeStr(term);
       const fullDist = getLevenshteinDistance(cleanQuery, cleanTerm);
-
       const termTokens = term.toLowerCase().split(/[^a-z0-9]+/);
       let minTokenDist = Infinity;
 
@@ -290,9 +222,7 @@ export const Navbar: React.FC = () => {
           if (!cleanTToken) continue;
 
           const dist = getLevenshteinDistance(cleanQToken, cleanTToken);
-          if (dist < minTokenDist) {
-            minTokenDist = dist;
-          }
+          if (dist < minTokenDist) minTokenDist = dist;
         }
       }
 
@@ -305,18 +235,14 @@ export const Navbar: React.FC = () => {
     }
 
     candidatesWithScores.sort((a, b) => a.dist - b.dist);
-
     const fuzzySuggestions = candidatesWithScores.map((c) => c.term).slice(0, 6);
-    const bestMatch = fuzzySuggestions.length > 0 ? fuzzySuggestions[0] : null;
-
     return {
       autoSuggestions: fuzzySuggestions,
-      didYouMean: bestMatch,
+      didYouMean: fuzzySuggestions.length > 0 ? fuzzySuggestions[0] : null,
       isFuzzyResult: fuzzySuggestions.length > 0
     };
   }, [searchQuery, searchTermsIndex]);
 
-  // Badge animation trigger on cart add
   useEffect(() => {
     if (totalItemCount > prevCountRef.current) {
       const animationFrame = requestAnimationFrame(() => setAnimateBadge(true));
@@ -330,7 +256,6 @@ export const Navbar: React.FC = () => {
     prevCountRef.current = totalItemCount;
   }, [totalItemCount]);
 
-  // Click outside listener for dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
@@ -373,6 +298,7 @@ export const Navbar: React.FC = () => {
     localStorage.removeItem('walters_search_history');
   };
 
+  // STRICT SEARCH ROUTING: Dynamic suggestions, pressing Enter, or clicking history ALWAYS route to catalog query
   const executeSearch = (term: string) => {
     if (!term.trim()) return;
     saveSearchTerm(term);
@@ -381,15 +307,8 @@ export const Navbar: React.FC = () => {
     closeMegaMenu();
     setIsMobileMenuOpen(false);
 
-    const matchedBrand = databaseBrands.find(
-      (b) => b.name.toLowerCase().trim() === term.toLowerCase().trim()
-    );
-
-    if (matchedBrand && !isContactBrand(matchedBrand)) {
-      navigate(`/brands/${matchedBrand.slug}`);
-    } else {
-      navigate(`/catalog?search=${encodeURIComponent(term.trim())}`);
-    }
+    // Navigate to Catalog with search query
+    navigate(`/catalog?search=${encodeURIComponent(term.trim())}`);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -401,7 +320,7 @@ export const Navbar: React.FC = () => {
     if (isAdmin) return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (catId) setActiveCategoryId(catId);
-    setIsSearchFocused(false); // Close search when hovering mega menu
+    setIsSearchFocused(false);
     setIsMegaMenuOpen(true);
   };
 
@@ -450,7 +369,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      {/* PAGE FOCUS BACKDROP BLUR (Active for Profile, Search, OR MegaMenu) */}
+      {/* PAGE FOCUS BACKDROP BLUR */}
       {(isProfileDropdownOpen || isSearchFocused || isMegaMenuOpen) && (
         <div 
           className="fixed inset-0 top-16 sm:top-20 bg-black/25 backdrop-blur-xs z-40 transition-all duration-200"
@@ -462,15 +381,14 @@ export const Navbar: React.FC = () => {
         />
       )}
 
-      {/* HEADER WITH SHADOW */}
+      {/* HEADER */}
       <header 
         className="sticky top-0 z-50 w-full bg-white font-sans text-walters-charcoal shadow-md"
         onMouseLeave={handleCategoryMouseLeave}
       >
-        {/* MAIN NAVBAR BAR */}
         <div className="w-full px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-8 max-w-7xl mx-auto">
           
-          {/* LEFT: Logo & Hoverable Hamburger */}
+          {/* LEFT: Logo & Hamburger */}
           <div className="flex items-center space-x-3 shrink-0">
             <Link to="/" className="flex items-center space-x-2.5 group" onClick={closeMegaMenu}>
               <img 
@@ -513,7 +431,7 @@ export const Navbar: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onFocus={(e) => {
-                    closeMegaMenu(); // Close mega menu when focusing search
+                    closeMegaMenu();
                     setIsSearchFocused(true);
                     e.target.select();
                   }}
@@ -541,15 +459,14 @@ export const Navbar: React.FC = () => {
                 )}
               </form>
 
-              {/* OVERSIZED SEARCH DROPDOWN EXTENDER */}
+              {/* DROPDOWN OVERLAY */}
               {isSearchFocused && (
                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-[135%] min-w-145 max-w-180 mt-3 bg-white border border-neutral-200 shadow-2xl z-50 text-walters-charcoal animate-in fade-in zoom-in-95 duration-150 rounded-2xl overflow-hidden max-h-[80vh] overflow-y-auto">
                   
-                  {/* LIVE TYPING SUGGESTIONS / MATCHING BRANDS / FUZZY MATCHING */}
                   {searchQuery.trim().length > 0 ? (
                     <div className="p-6 space-y-5">
                       
-                      {/* MATCHING BRANDS SEARCH CARDS */}
+                      {/* BRAND CARDS (The ONLY element that links directly to /brands/:slug) */}
                       {matchingBrands.length > 0 && (
                         <div className="border-b border-neutral-100 pb-4">
                           <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-3 font-serif">
@@ -571,7 +488,7 @@ export const Navbar: React.FC = () => {
                         </div>
                       )}
 
-                      {/* DID YOU MEAN BANNER FOR TYPOS */}
+                      {/* DID YOU MEAN */}
                       {isFuzzyResult && didYouMean && (
                         <div className="pb-3 border-b border-neutral-100 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral-500">
@@ -581,7 +498,7 @@ export const Navbar: React.FC = () => {
                         </div>
                       )}
 
-                      {/* KEYWORD AUTO-SUGGESTIONS LIST */}
+                      {/* KEYWORD AUTO-SUGGESTIONS */}
                       {autoSuggestions.length > 0 ? (
                         <div className="space-y-1">
                           {autoSuggestions.map((suggestion) => (
@@ -608,7 +525,6 @@ export const Navbar: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    /* EMPTY INPUT: RECENT & POPULAR */
                     <>
                       {/* RECENT SEARCHES */}
                       {searchHistory.length > 0 && (
@@ -679,10 +595,8 @@ export const Navbar: React.FC = () => {
             </div>
           )}
 
-          {/* RIGHT: Actions */}
+          {/* RIGHT: User Actions */}
           <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
-            
-            {/* DYNAMIC PROFILE PILL ICON WITH INITIAL */}
             {isAuthenticated ? (
               <div className="relative" ref={profileDropdownRef}>
                 <button
@@ -690,7 +604,6 @@ export const Navbar: React.FC = () => {
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center space-x-2 pl-1 pr-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/80 transition-colors cursor-pointer focus:outline-none"
                   aria-expanded={isProfileDropdownOpen}
-                  aria-label="User Account Menu"
                 >
                   <div className="w-8 h-8 rounded-full bg-walters-navy text-white flex items-center justify-center font-serif text-sm font-bold shadow-xs">
                     {userInitial}
@@ -698,7 +611,6 @@ export const Navbar: React.FC = () => {
                   <ChevronDown className={`w-3.5 h-3.5 text-walters-navy transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* DROPDOWN MENU CARD */}
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 mt-3.5 w-64 bg-white rounded-2xl border border-neutral-200 py-0 z-50 text-sm text-walters-charcoal shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
                     <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/60">
@@ -765,7 +677,7 @@ export const Navbar: React.FC = () => {
               </Link>
             )}
 
-            {/* FAVORITE HEART ICON */}
+            {/* FAVORITE HEART */}
             {!isAdmin && (
               <Link
                 to="/favorites"
@@ -777,14 +689,13 @@ export const Navbar: React.FC = () => {
               </Link>
             )}
 
-            {/* SHOPPING BAG BUTTON */}
+            {/* SHOPPING BAG */}
             {!isAdmin && (
               <button
                 type="button"
                 onClick={handleCartClick}
                 onDoubleClick={handleCartDoubleClick}
                 className="relative flex items-center space-x-2 bg-white text-walters-navy text-xs font-medium px-4 py-2 rounded-full cursor-pointer border border-walters-border hover:border-walters-navy transition-colors shadow-2xs"
-                aria-label="Shopping Bag Drawer"
               >
                 <ShoppingBag className="w-3.5 h-3.5 text-walters-navy" />
                 <span>Bag</span>
@@ -809,7 +720,6 @@ export const Navbar: React.FC = () => {
                 closeMegaMenu();
               }}
               className="md:hidden p-2 text-walters-navy focus:outline-none rounded-lg hover:bg-white/60"
-              aria-label="Toggle mobile menu"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>

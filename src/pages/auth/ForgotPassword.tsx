@@ -1,16 +1,16 @@
-//src/pages/auth/ForgotPassword.tsx
+// src/pages/auth/ForgotPassword.tsx
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Mail, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowRight, CheckCircle2, RefreshCw } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { WavyDivider } from '../../components/WavyDivider';
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSent, setIsSent] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,19 +22,20 @@ export const ForgotPassword: React.FC = () => {
     try {
       setIsSubmitting(true);
       await apiClient.post('/auth/forgot-password', { email });
-      setIsSent(true);
-      toast.success('Reset link dispatched to your email.');
+      setIsSubmitted(true);
+      toast.success('Reset link request sent.');
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { detail?: string } } };
-      toast.error(apiError.response?.data?.detail || 'Failed to request password reset.');
+      toast.error(apiError.response?.data?.detail || 'Failed to send reset link.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-walters-cream text-walters-charcoal font-sans">
-      <div className="relative w-full md:w-[38vw] bg-walters-navy text-white min-h-[35vh] md:min-h-screen p-8 sm:p-12 flex flex-col justify-between shrink-0 z-20 shadow-2xl">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white text-walters-charcoal font-sans overflow-x-hidden">
+      {/* Left Brand Panel */}
+      <div className="relative w-full md:w-[45vw] lg:w-[42vw] bg-walters-navy text-white min-h-[35vh] md:min-h-screen p-8 sm:p-12 lg:p-16 flex flex-col justify-between shrink-0 z-20 shadow-2xl">
         <div className="relative z-10">
           <span className="tracking-[0.25em] text-white text-xs font-bold uppercase">
             WALTERS OPTICIANS
@@ -51,17 +52,17 @@ export const ForgotPassword: React.FC = () => {
         <WavyDivider />
       </div>
 
-      <div className="w-full md:w-[62vw] bg-walters-cream flex items-center justify-center p-8 sm:p-16 min-h-[65vh] md:min-h-screen">
-        <div className="w-full max-w-sm mx-auto space-y-6">
+      {/* Right Form Panel */}
+      <div className="w-full md:w-[55vw] lg:w-[58vw] bg-white flex items-center justify-center p-8 sm:p-12 lg:p-16 min-h-[65vh] md:min-h-screen relative z-10">
+        <div className="w-full max-w-md mx-auto space-y-6">
           <Link
             to="/login"
-            className="inline-flex items-center space-x-1.5 text-xs font-semibold text-walters-slate hover:text-walters-navy transition-colors"
+            className="inline-flex items-center text-xs text-walters-slate hover:text-walters-navy transition-colors font-medium"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Sign In</span>
+            ← Back to Sign In
           </Link>
 
-          {!isSent ? (
+          {!isSubmitted ? (
             <>
               <div className="space-y-1">
                 <h2 className="font-serif text-3xl text-walters-navy">Forgot Password?</h2>
@@ -85,7 +86,7 @@ export const ForgotPassword: React.FC = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
-                      className="w-full pl-10 pr-4 py-3 bg-white/80 border border-walters-border rounded-lg text-walters-charcoal text-sm focus:outline-none focus:border-walters-navy focus:bg-white transition-all shadow-xs"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50/80 border border-walters-border rounded-lg text-walters-charcoal text-sm focus:outline-none focus:border-walters-navy focus:bg-white transition-all shadow-xs"
                     />
                   </div>
                 </div>
@@ -101,20 +102,47 @@ export const ForgotPassword: React.FC = () => {
               </form>
             </>
           ) : (
-            <div className="bg-white p-6 rounded-3xl border border-walters-border shadow-2xs space-y-4 text-center">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                <Mail className="w-6 h-6" />
+            <div className="bg-white p-8 rounded-3xl border border-walters-border shadow-xs space-y-5 text-center">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-200">
+                <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="font-serif text-xl text-walters-navy">Check Your Email</h3>
-              <p className="text-xs text-walters-slate leading-relaxed">
-                If an account exists for <strong className="text-walters-navy">{email}</strong>, password reset instructions have been dispatched.
-              </p>
-              <Link
-                to="/login"
-                className="inline-block px-5 py-2.5 bg-walters-navy text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-all"
-              >
-                Return to Login
-              </Link>
+
+              <div className="space-y-2">
+                <h3 className="font-serif text-2xl text-walters-navy">Request Received</h3>
+                <p className="text-xs text-walters-slate leading-relaxed">
+                  If an account exists for <strong className="text-walters-navy">{email}</strong>, you will receive a password reset link shortly.
+                </p>
+              </div>
+
+              {/* HELPFUL FALLBACK ASSISTANCE BOX */}
+              <div className="bg-slate-50 border border-walters-border/80 p-4 rounded-2xl text-left space-y-2 text-xs text-walters-slate">
+                <p className="font-semibold text-walters-navy text-[11px] uppercase tracking-wider">
+                  Didn't receive the email?
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] leading-normal text-walters-slate/90">
+                  <li>Check your spam or junk mail folder.</li>
+                  <li>Verify that <strong className="text-walters-navy">{email}</strong> was spelled correctly.</li>
+                  <li>Emails may take 1 to 2 minutes to arrive.</li>
+                </ul>
+              </div>
+
+              <div className="pt-2 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitted(false)}
+                  className="w-full py-2.5 bg-slate-50 border border-walters-border rounded-xl text-xs font-bold text-walters-navy hover:bg-walters-navy hover:text-white transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Try Another Email Address</span>
+                </button>
+
+                <Link
+                  to="/login"
+                  className="block w-full py-2.5 bg-walters-navy text-white rounded-xl text-xs font-bold hover:bg-walters-gold hover:text-walters-navy transition-all text-center"
+                >
+                  Return to Sign In
+                </Link>
+              </div>
             </div>
           )}
         </div>

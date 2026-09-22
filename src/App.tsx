@@ -104,23 +104,44 @@ const isContactLens = (product: Product) => {
   return cat === 'contact_lenses' || cat === 'contact-lenses' || cat === 'contacts';
 };
 
+interface PaginatedProductsResponse {
+  items?: Product[];
+}
+
 // Public Landing Page View
 const HomeView: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchHomeProducts = async () => {
       try {
-        const res = await apiClient.get<Product[]>('/products/');
-        setProducts(res.data);
+        setLoading(true);
+        // Pass eyewear_only: true to ensure SQL filters optical frames & sunglasses directly at database query level
+        const res = await apiClient.get<Product[] | PaginatedProductsResponse>('/products/', {
+          params: {
+            eyewear_only: true,
+            page_size: 24,
+          },
+        });
+
+        const productList = Array.isArray(res.data) 
+          ? res.data 
+          : (res.data?.items || []);
+        
+        setProducts(productList);
       } catch (error) {
         console.error('Failed to fetch home products', error);
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchHomeProducts();
   }, []);
 
   const frameProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
     return products.filter((p) => !isContactLens(p));
   }, [products]);
 
@@ -128,7 +149,7 @@ const HomeView: React.FC = () => {
     <>
       <Hero />
       <HomeFeatureGrid />
-      <FeaturedFrames products={frameProducts} />
+      <FeaturedFrames products={frameProducts} loading={loading} />
       <RecommendedCollections />
       <VisitStore />
     </>

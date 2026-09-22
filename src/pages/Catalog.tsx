@@ -1,91 +1,47 @@
 // src/pages/Catalog.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import type { Product } from '../types/index';
 import { ProductCard, type ProductGroup } from '../components/ProductCard';
+import { FilterDrawer, type FilterState, type FacetsData } from '../components/FilterDrawer';
 import { useCart } from '../hooks/useCart';
 import { useCurrency } from '../hooks/useCurrency';
 import { toast } from 'sonner';
-import { Search, X, Filter, HelpCircle } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Sparkles, Loader2 } from 'lucide-react';
 
 interface ExtendedApiProduct extends Product {
   subcategory?: string | { slug?: string; name?: string };
+  frame_type?: string;
+  lens_type?: string;
 }
 
-const FALLBACK_BRANDS = [
-  'Ray-Ban',
-  'Tiffany & Co.',
-  'Oakley',
-  'Gucci',
-  'Prada',
-  'Tom Ford',
-  'Persol',
-  'Versace',
-  'Burberry',
-  'Chanel',
-  'Dior',
-  'Cartier',
-  'Bottega Veneta',
-  'Bulgari',
-  'Calvin Klein',
-  'Dolce & Gabbana',
-  'Emporio Armani',
-  'Hugo Boss',
-  'Jimmy Choo',
-  'Lacoste',
-  'Marc Jacobs',
-  'Michael Kors',
-  'Nike',
-  'Polo Ralph Lauren',
-  'Saint Laurent',
-  'Ted Baker'
-];
+interface CatalogApiResponse {
+  items?: ExtendedApiProduct[];
+  total_count?: number;
+  total_pages?: number;
+  facets?: FacetsData;
+  did_you_mean?: string;
+  original_query?: string;
+}
 
-const GENERIC_OPTICAL_TYPES = [
-  'Aviator',
-  'Wayfarer',
-  'Cat Eye',
-  'Round Frames',
-  'Square Frames',
-  'Titanium Frames',
-  'Blue Light Lenses',
-  'Single Vision',
-  'Varifocal Lenses',
-  'Reading Glasses',
-  'Polarized Sunglasses'
-];
+const BATCH_PAGE_SIZE = 24;
 
-const normalizeStr = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-const getLevenshteinDistance = (a: string, b: string): number => {
-  if (a === b) return 0;
-  if (!a.length) return b.length;
-  if (!b.length) return a.length;
-
-  const matrix: number[][] = [];
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
-  }
-  return matrix[b.length][a.length];
+const INITIAL_FILTER_STATE: FilterState = {
+  gender: [],
+  shapes: [],
+  colors: [],
+  frameTypes: [],
+  lensTypes: [],
+  frameMaterials: [],
+  sizes: [],
+  priceRange: [0, 2000],
+  lensWidthRange: [38, 69],
+  sortBy: 'popularity',
 };
+
+const HERO_FALLBACK_GRADIENT = 'linear-gradient(135deg, #0f172a 0%, #064e3b 100%)';
 
 const groupProductsByModel = (products: Product[]): ProductGroup[] => {
   const groupMap = new Map<string, Product[]>();
@@ -110,177 +66,154 @@ const groupProductsByModel = (products: Product[]): ProductGroup[] => {
 };
 
 export const Catalog: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ExtendedApiProduct[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [serverFacets, setServerFacets] = useState<FacetsData | undefined>(undefined);
+  const [didYouMean, setDidYouMean] = useState<string | null>(null);
+  const [originalQuery, setOriginalQuery] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [forceExactSearch, setForceExactSearch] = useState<boolean>(false);
-  
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [localSearchInput, setLocalSearchInput] = useState<string>('');
+
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
+  const [drawerFilters, setDrawerFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
+
   const [searchParams, setSearchParams] = useSearchParams();
 
   const searchQueryParam = searchParams.get('search') || '';
   const categoryParam = searchParams.get('category') || '';
-  const subcategoryParam = searchParams.get('subcategory') || '';
   const brandParam = searchParams.get('brand') || '';
-
-  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQueryParam);
-  if (searchQueryParam !== prevSearchQuery) {
-    setPrevSearchQuery(searchQueryParam);
-    setForceExactSearch(false);
-  }
 
   const { handleAddStandard, handleAddFrameOnly, handleSelectPrescription } = useCart();
   const { formatPrice } = useCurrency();
 
+  // Replaced problematic synchronous useEffect with standard React render-phase update
+  const [prevParamsKey, setPrevParamsKey] = useState('');
+  const currentParamsKey = `${searchQueryParam}|${categoryParam}|${brandParam}|${JSON.stringify(drawerFilters)}`;
+  
+  if (currentParamsKey !== prevParamsKey) {
+    setPrevParamsKey(currentParamsKey);
+    setPage(1);
+    setProducts([]);
+    setLocalSearchInput(searchQueryParam);
+  }
+
+  // Fetch paginated chunk directly from SQLite / FastAPI
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
+    const fetchCatalogBatch = async () => {
+      const isFirstPage = page === 1;
+
+      if (isFirstPage) {
         setLoading(true);
-        const res = await apiClient.get<ExtendedApiProduct[]>('/products/');
-        setProducts(res.data);
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const res = await apiClient.get<CatalogApiResponse | ExtendedApiProduct[]>('/products/', {
+          params: {
+            q: searchQueryParam || undefined,
+            category: categoryParam || undefined,
+            brand: brandParam || undefined,
+            eyewear_only: !categoryParam,
+            sort_by: drawerFilters.sortBy,
+            genders: drawerFilters.gender.length ? drawerFilters.gender.join(',') : undefined,
+            shapes: drawerFilters.shapes.length ? drawerFilters.shapes.join(',') : undefined,
+            colors: drawerFilters.colors.length ? drawerFilters.colors.join(',') : undefined,
+            materials: drawerFilters.frameMaterials.length ? drawerFilters.frameMaterials.join(',') : undefined,
+            lens_types: drawerFilters.lensTypes.length ? drawerFilters.lensTypes.join(',') : undefined,
+            sizes: drawerFilters.sizes.length ? drawerFilters.sizes.join(',') : undefined,
+            min_price: drawerFilters.priceRange[0] > 0 ? Math.floor(drawerFilters.priceRange[0]) : undefined,
+            max_price: drawerFilters.priceRange[1] < 2000 ? Math.ceil(drawerFilters.priceRange[1]) : undefined,
+            min_width: drawerFilters.lensWidthRange[0] > 38 ? drawerFilters.lensWidthRange[0] : undefined,
+            max_width: drawerFilters.lensWidthRange[1] < 69 ? drawerFilters.lensWidthRange[1] : undefined,
+            page: page,
+            page_size: BATCH_PAGE_SIZE,
+          },
+        });
+
+        if (Array.isArray(res.data)) {
+          setProducts(res.data);
+          setTotalCount(res.data.length);
+          setTotalPages(1);
+          setServerFacets(undefined);
+          setDidYouMean(null);
+          setOriginalQuery(null);
+        } else {
+          const newItems = res.data.items || [];
+          setTotalCount(res.data.total_count || 0);
+          setTotalPages(res.data.total_pages || 1);
+          setServerFacets(res.data.facets);
+          setDidYouMean(res.data.did_you_mean || null);
+          setOriginalQuery(res.data.original_query || null);
+
+          if (isFirstPage) {
+            setProducts(newItems);
+          } else {
+            setProducts((prev) => [...prev, ...newItems]);
+          }
+        }
       } catch (error) {
-        console.error('Failed to fetch products', error);
-        toast.error('Failed to load catalog. Please try again.');
+        console.error('Failed to fetch catalog batch', error);
+        toast.error('Failed to load catalog products.');
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
-    fetchProducts();
-  }, []);
 
-  const searchTermsIndex = useMemo(() => {
-    const termSet = new Set<string>();
-
-    products.forEach((p) => {
-      if (p.brand) termSet.add(p.brand);
-      if (p.name) termSet.add(p.name);
-      if (p.category) termSet.add(p.category);
-    });
-
-    FALLBACK_BRANDS.forEach((b) => termSet.add(b));
-    GENERIC_OPTICAL_TYPES.forEach((t) => termSet.add(t));
-
-    return Array.from(termSet);
-  }, [products]);
-
-  const { displayProducts, fuzzyCorrection } = useMemo(() => {
-    if (!products.length) return { displayProducts: [], fuzzyCorrection: null };
-
-    const filterByTerm = (searchTerm: string) => {
-      const queryClean = normalizeStr(searchTerm);
-      const isContactCategoryTarget = normalizeStr(categoryParam).includes('contact');
-
-      return products.filter((p) => {
-        const prodCatClean = normalizeStr(p.category || '');
-        const isProductContactLens = prodCatClean === 'contactlenses' || prodCatClean === 'contacts';
-
-        // ISOLATION GUARD:
-        // Exclude contact lenses unless the user explicitly requested contact lenses category
-        if (!isContactCategoryTarget && isProductContactLens) {
-          return false;
-        }
-
-        // 1. Search Query Match
-        if (queryClean !== '') {
-          const matchesName = normalizeStr(p.name || '').includes(queryClean);
-          const matchesBrand = normalizeStr(p.brand || '').includes(queryClean);
-          const matchesModel = normalizeStr(p.model_code || '').includes(queryClean);
-          const matchesDesc = normalizeStr(p.description || '').includes(queryClean);
-          const matchesColor = normalizeStr(p.color_description || '').includes(queryClean);
-
-          if (!matchesName && !matchesBrand && !matchesModel && !matchesDesc && !matchesColor) {
-            return false;
-          }
-        }
-
-        // 2. Category Match
-        if (categoryParam) {
-          const paramClean = normalizeStr(categoryParam);
-          if (prodCatClean !== paramClean) return false;
-        }
-
-        // 3. Subcategory Match
-        if (subcategoryParam) {
-          const rawSub = (p as ExtendedApiProduct).subcategory;
-          const subStr = typeof rawSub === 'string' 
-            ? rawSub 
-            : rawSub?.slug || rawSub?.name || '';
-          
-          if (normalizeStr(subStr) !== normalizeStr(subcategoryParam)) return false;
-        }
-
-        // 4. Brand Match
-        if (brandParam) {
-          if (normalizeStr(p.brand || '') !== normalizeStr(brandParam)) return false;
-        }
-
-        return true;
-      });
-    };
-
-    const exactMatches = filterByTerm(searchQueryParam);
-
-    if (exactMatches.length > 0 || !searchQueryParam.trim() || forceExactSearch) {
-      return { displayProducts: exactMatches, fuzzyCorrection: null };
-    }
-
-    // Fuzzy Search Fallback
-    const cleanQuery = normalizeStr(searchQueryParam);
-    const queryTokens = searchQueryParam.toLowerCase().trim().split(/\s+/);
-    let bestCandidate: string | null = null;
-    let lowestDistance = Infinity;
-
-    for (const term of searchTermsIndex) {
-      const cleanTerm = normalizeStr(term);
-      const fullDist = getLevenshteinDistance(cleanQuery, cleanTerm);
-
-      const termTokens = term.toLowerCase().split(/[^a-z0-9]+/);
-      let minTokenDist = Infinity;
-
-      for (const qToken of queryTokens) {
-        const cleanQToken = normalizeStr(qToken);
-        if (!cleanQToken) continue;
-
-        for (const tToken of termTokens) {
-          const cleanTToken = normalizeStr(tToken);
-          if (!cleanTToken) continue;
-
-          const dist = getLevenshteinDistance(cleanQToken, cleanTToken);
-          if (dist < minTokenDist) {
-            minTokenDist = dist;
-          }
-        }
-      }
-
-      const effectiveDist = Math.min(fullDist, minTokenDist);
-      const maxAllowedDist = Math.max(2, Math.floor(cleanQuery.length * 0.45));
-
-      if (effectiveDist <= maxAllowedDist && effectiveDist < lowestDistance) {
-        lowestDistance = effectiveDist;
-        bestCandidate = term;
-      }
-    }
-
-    if (bestCandidate) {
-      const fuzzyMatches = filterByTerm(bestCandidate);
-      if (fuzzyMatches.length > 0) {
-        return { displayProducts: fuzzyMatches, fuzzyCorrection: bestCandidate };
-      }
-    }
-
-    return { displayProducts: [], fuzzyCorrection: null };
-  }, [products, searchQueryParam, categoryParam, subcategoryParam, brandParam, forceExactSearch, searchTermsIndex]);
+    fetchCatalogBatch();
+    // Added specific object properties to dependency array to satisfy ESLint exhaustive-deps safely
+  }, [
+    page, 
+    searchQueryParam, 
+    categoryParam, 
+    brandParam, 
+    drawerFilters.colors,
+    drawerFilters.frameMaterials,
+    drawerFilters.gender,
+    drawerFilters.lensTypes,
+    drawerFilters.lensWidthRange,
+    drawerFilters.priceRange,
+    drawerFilters.shapes,
+    drawerFilters.sizes,
+    drawerFilters.sortBy
+  ]);
 
   const productGroups = useMemo(() => {
-    return groupProductsByModel(displayProducts);
-  }, [displayProducts]);
+    return groupProductsByModel(products);
+  }, [products]);
+
+  const handleLoadMore = () => {
+    if (page < totalPages) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const nextParams = new URLSearchParams(searchParams);
+    if (localSearchInput.trim()) {
+      nextParams.set('search', localSearchInput.trim());
+    } else {
+      nextParams.delete('search');
+    }
+    setSearchParams(nextParams);
+  };
 
   const clearFilter = (key: string) => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete(key);
+    if (key === 'search') setLocalSearchInput('');
     setSearchParams(nextParams);
   };
 
-  const clearAllFilters = () => {
+  const handleClearAllFilters = () => {
+    setLocalSearchInput('');
     setSearchParams(new URLSearchParams());
+    setDrawerFilters(INITIAL_FILTER_STATE);
   };
 
   const handleAddToCart = (product: Product, option: string) => {
@@ -299,134 +232,209 @@ export const Catalog: React.FC = () => {
     }
   };
 
-  const hasActiveFilters = Boolean(searchQueryParam || categoryParam || subcategoryParam || brandParam);
-  const isContactCategory = categoryParam.toLowerCase().includes('contact');
+  const isContactCategory = categoryParam.toLowerCase().includes('contact') || categoryParam.toLowerCase().includes('care');
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      {/* CATALOG TITLE & ACTIVE FILTER BADGES */}
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-walters-navy">
-          {searchQueryParam 
-            ? `Search Results for "${searchQueryParam}"` 
-            : isContactCategory 
-            ? 'Contact Lenses Catalog' 
-            : 'Optical Frames Catalog'}
-        </h1>
-        
-        <p className="text-sm text-walters-slate/80 mt-1">
-          {isContactCategory 
-            ? 'Browse daily, monthly, toric, and multifocal contact lens solutions.' 
-            : 'Select a frame and add your custom prescription, or buy them frame-only.'}
-        </p>
+    <div className="min-h-screen bg-white pb-24 font-sans text-walters-charcoal">
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        filters={drawerFilters}
+        setFilters={setDrawerFilters}
+        totalResultsCount={totalCount}
+        onClearAll={handleClearAllFilters}
+        facets={serverFacets}
+        products={products}
+      />
 
-        {/* ACTIVE FILTER TAG STRIP */}
-        {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2 pt-4">
-            <span className="text-xs font-bold text-walters-navy uppercase tracking-wider flex items-center gap-1 mr-1">
-              <Filter className="w-3.5 h-3.5 text-walters-gold" />
-              Active Filters:
-            </span>
+      {!searchQueryParam && (
+        <div 
+          className="relative text-white py-14 sm:py-20 px-8 lg:px-12 shadow-md overflow-hidden"
+          style={{ background: HERO_FALLBACK_GRADIENT }}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(197,162,101,0.18),transparent_55%)] pointer-events-none" />
+          
+          <div className="max-w-[1600px] mx-auto relative z-10 space-y-3">
+            <div className="flex items-center space-x-2 text-xs font-bold tracking-[0.25em] text-walters-gold uppercase">
+              <span>Walters Opticians</span>
+              <span>•</span>
+              <span>Precision Eyewear</span>
+            </div>
 
-            {searchQueryParam && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-walters-navy text-white text-xs rounded-full">
-                Search: "{searchQueryParam}"
-                <button type="button" onClick={() => clearFilter('search')} className="hover:text-walters-gold cursor-pointer">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal text-white">
+              {isContactCategory 
+                ? 'Contact Lenses & Care' 
+                : brandParam
+                ? `${brandParam} Eyewear`
+                : categoryParam
+                ? `${categoryParam.replace(/_/g, ' ')}`
+                : 'Designer Frames & Sunglasses'}
+            </h1>
 
-            {categoryParam && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-walters-navy text-white text-xs rounded-full">
-                Category: {categoryParam}
-                <button type="button" onClick={() => clearFilter('category')} className="hover:text-walters-gold cursor-pointer">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
+            <p className="text-xs sm:text-sm text-white/75 max-w-2xl font-light leading-relaxed">
+              {isContactCategory 
+                ? 'Daily, monthly, toric, and multifocal contact lens solutions backed by optical precision.' 
+                : 'Handcrafted luxury frames, Italian acetate, and bespoke prescription dispensing.'}
+            </p>
+          </div>
+        </div>
+      )}
 
-            {subcategoryParam && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-walters-navy text-white text-xs rounded-full">
-                Subcategory: {subcategoryParam}
-                <button type="button" onClick={() => clearFilter('subcategory')} className="hover:text-walters-gold cursor-pointer">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
+      <div className="max-w-[1600px] mx-auto px-8 lg:px-12 pt-8 pb-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-slate-100 pb-6 gap-4">
+          <div className="space-y-1">
+            <h2 className="font-serif text-2xl sm:text-3xl text-walters-navy font-normal capitalize">
+              {searchQueryParam 
+                ? `Search: "${searchQueryParam}"` 
+                : categoryParam 
+                ? `${categoryParam.replace(/_/g, ' ')}` 
+                : brandParam
+                ? `${brandParam}`
+                : 'Eyewear & Frames'}
+            </h2>
+            <p className="text-xs text-slate-400 font-light">
+              {totalCount.toLocaleString()} models available
+            </p>
+          </div>
 
-            {brandParam && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-walters-navy text-white text-xs rounded-full">
-                Brand: {brandParam}
-                <button type="button" onClick={() => clearFilter('brand')} className="hover:text-walters-gold cursor-pointer">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-
+          <div className="flex items-center space-x-3">
             <button
               type="button"
-              onClick={clearAllFilters}
-              className="text-xs text-rose-600 hover:underline font-bold ml-2 cursor-pointer"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-50 hover:bg-walters-navy hover:text-white rounded-full text-xs text-slate-700 transition-all duration-200 cursor-pointer border border-slate-200/80 shadow-2xs font-medium"
             >
-              Reset All
+              <SlidersHorizontal className="w-3.5 h-3.5 text-walters-gold" />
+              <span>Filters & Sort</span>
             </button>
+
+            <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={localSearchInput}
+                onChange={(e) => setLocalSearchInput(e.target.value)}
+                placeholder="Search catalog..."
+                className="w-full pl-8 pr-7 py-2.5 bg-slate-50 border border-slate-200/80 rounded-full text-xs text-walters-charcoal focus:outline-none focus:border-walters-navy focus:bg-white transition-all"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3 pointer-events-none" />
+              {localSearchInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalSearchInput('');
+                    clearFilter('search');
+                  }}
+                  className="absolute right-2.5 top-3 text-slate-400 hover:text-walters-navy cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </form>
+          </div>
+        </div>
+
+        {didYouMean && (
+          <div className="mt-4 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center space-x-2 text-xs text-amber-900">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Showing results for <strong className="font-semibold text-amber-950 underline">{didYouMean}</strong> instead of <em>"{originalQuery}"</em>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.set('search', didYouMean);
+                setSearchParams(nextParams);
+              }}
+              className="ml-auto font-bold text-walters-navy hover:underline cursor-pointer"
+            >
+              Search for {didYouMean}
+            </button>
+          </div>
+        )}
+
+        {searchQueryParam && (
+          <div className="flex flex-wrap items-center gap-2 pt-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 text-xs rounded-full">
+              Search: "{searchQueryParam}"
+              <button type="button" onClick={() => clearFilter('search')} className="hover:text-walters-navy cursor-pointer">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
           </div>
         )}
       </div>
 
-      {/* FUZZY CORRECTION BANNER */}
-      {fuzzyCorrection && (
-        <div className="mb-6 p-4 bg-amber-50/80 border border-amber-200/90 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950 animate-in fade-in duration-200">
-          <div className="flex items-center gap-2.5 text-sm">
-            <HelpCircle className="w-5 h-5 text-amber-600 shrink-0" />
-            <span>
-              Showing results for <strong className="font-bold underline text-walters-navy">{fuzzyCorrection}</strong> instead of <em>"{searchQueryParam}"</em>
-            </span>
+      <div className="max-w-[1600px] mx-auto px-8 lg:px-12 pt-4">
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <div key={n} className="bg-slate-50 rounded-2xl h-96 animate-pulse border border-slate-100" />
+            ))}
           </div>
-          <button
-            type="button"
-            onClick={() => setForceExactSearch(true)}
-            className="text-xs font-semibold text-amber-800 hover:text-amber-950 underline cursor-pointer shrink-0"
-          >
-            Search for "{searchQueryParam}" anyway
-          </button>
-        </div>
-      )}
+        ) : productGroups.length === 0 ? (
+          <div className="text-center py-24 bg-slate-50/50 rounded-3xl border border-slate-100 max-w-lg mx-auto space-y-4">
+            <Search className="w-8 h-8 text-slate-300 mx-auto" />
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg text-walters-navy">No products found</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                We couldn't find any eyewear matching your selected parameters.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="px-5 py-2.5 bg-walters-navy text-white text-xs rounded-full hover:bg-walters-gold hover:text-walters-navy transition-colors cursor-pointer"
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-14">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+              {productGroups.map((group) => (
+                <ProductCard
+                  key={group.groupKey}
+                  group={group}
+                  onAddToCart={handleAddToCart}
+                  formatPrice={formatPrice}
+                />
+              ))}
+            </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="bg-neutral-100 rounded-3xl h-80 animate-pulse border border-neutral-200"></div>
-          ))}
-        </div>
-      ) : productGroups.length === 0 ? (
-        <div className="text-center py-20 bg-neutral-50 rounded-3xl border border-dashed border-neutral-200">
-          <Search className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-          <h3 className="font-serif text-lg font-bold text-walters-navy">No products match your search</h3>
-          <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-            Try checking for spelling errors, adjusting your filter parameters, or browsing all collections.
-          </p>
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="mt-4 px-6 py-2.5 bg-walters-navy text-white font-bold text-xs uppercase tracking-wider rounded-full hover:bg-walters-gold hover:text-walters-navy transition-colors cursor-pointer"
-          >
-            Clear Search & Filters
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {productGroups.map((group) => (
-            <ProductCard
-              key={group.groupKey}
-              group={group}
-              onAddToCart={handleAddToCart}
-              formatPrice={formatPrice}
-            />
-          ))}
-        </div>
-      )}
+            {page < totalPages && (
+              <div className="flex flex-col items-center justify-center pt-8 space-y-3">
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Showing <strong className="text-walters-navy font-semibold">{products.length.toLocaleString()}</strong> of{' '}
+                  <strong className="text-walters-navy font-semibold">{totalCount.toLocaleString()}</strong> products
+                </span>
+
+                <div className="w-56 h-1 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-walters-navy transition-all duration-300 rounded-full"
+                    style={{ width: `${Math.min(100, (products.length / (totalCount || 1)) * 100)}%` }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="mt-2 inline-flex items-center space-x-2 px-8 py-3 bg-walters-navy text-white font-medium text-xs tracking-wider rounded-full hover:bg-walters-gold hover:text-walters-navy transition-all duration-200 shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Loading next batch...</span>
+                    </>
+                  ) : (
+                    <span>Load More ({BATCH_PAGE_SIZE} items)</span>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

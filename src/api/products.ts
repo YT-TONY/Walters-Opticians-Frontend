@@ -1,5 +1,3 @@
-//src/api/products.ts
-
 import { apiClient } from './client';
 
 export interface ProductFilterParams {
@@ -13,8 +11,8 @@ export interface ProductFilterParams {
   max_price?: number;
   in_stock_only?: boolean;
   sort_by?: string;
-  skip?: number;
-  limit?: number;
+  page?: number;
+  page_size?: number;
 }
 
 export interface BackendProduct {
@@ -66,8 +64,11 @@ export interface PaginatedCatalogResponse {
 
 export const productsApi = {
   getAll: async (params?: ProductFilterParams): Promise<BackendProduct[]> => {
-    const response = await apiClient.get<BackendProduct[]>('/products/', { params });
-    return response.data;
+    const response = await apiClient.get<BackendProduct[] | PaginatedCatalogResponse>('/products/', { params });
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
   },
 
   getBrands: async (): Promise<string[]> => {

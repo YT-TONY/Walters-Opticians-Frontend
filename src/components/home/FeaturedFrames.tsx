@@ -2,15 +2,27 @@
 
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Glasses } from 'lucide-react';
 import { ProductCard, type ProductGroup } from '../ProductCard';
 import { useCart } from '../../hooks/useCart';
 import { useCurrency } from '../../hooks/useCurrency';
 import type { Product } from '../../types/index';
 
 interface FeaturedFramesProps {
-  products: Product[];
+  products?: Product[] | { items?: Product[] } | null;
+  loading?: boolean;
 }
+
+// Safely normalizes input whether it is a flat array or a paginated response object
+const extractProductsArray = (input: unknown): Product[] => {
+  if (!input) return [];
+  if (Array.isArray(input)) return input;
+  if (typeof input === 'object' && input !== null && 'items' in input) {
+    const items = (input as { items?: unknown }).items;
+    if (Array.isArray(items)) return items as Product[];
+  }
+  return [];
+};
 
 // Helper to safely extract category string
 const getCategoryString = (category: unknown): string => {
@@ -25,10 +37,11 @@ const getCategoryString = (category: unknown): string => {
 
 const normalizeStr = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-// Strictly validates that a product is either an Optical Frame or Sunglasses
+// Validates that a product is either an Optical Frame or Sunglasses
 const isEyewearProduct = (product: Product): boolean => {
+  if (!product) return false;
   const catClean = normalizeStr(getCategoryString(product.category));
-  
+
   // Reject contact lenses, solutions, drops, and care accessories
   if (
     catClean.includes('contact') ||
@@ -39,13 +52,17 @@ const isEyewearProduct = (product: Product): boolean => {
     return false;
   }
 
-  // Match optical frames or sunglasses
+  // Allow default fallback if category field is empty or unassigned
+  if (!catClean) return true;
+
+  // Match optical frames, sunglasses, or general eyewear
   return (
     catClean.includes('optical') ||
     catClean.includes('frame') ||
     catClean.includes('glass') ||
     catClean.includes('sun') ||
-    catClean.includes('shade')
+    catClean.includes('shade') ||
+    catClean.includes('eyewear')
   );
 };
 
@@ -57,7 +74,7 @@ const groupProductsByModel = (products: Product[]): ProductGroup[] => {
     const groupKey =
       product.model_code && product.model_code.trim() !== ''
         ? product.model_code.toLowerCase().trim()
-        : `${product.brand.toLowerCase().trim()}-${product.name.toLowerCase().trim()}`;
+        : `${(product.brand || '').toLowerCase().trim()}-${(product.name || '').toLowerCase().trim()}`;
 
     if (!groupMap.has(groupKey)) {
       groupMap.set(groupKey, []);
@@ -72,13 +89,14 @@ const groupProductsByModel = (products: Product[]): ProductGroup[] => {
   }));
 };
 
-export const FeaturedFrames: React.FC<FeaturedFramesProps> = ({ products }) => {
+export const FeaturedFrames: React.FC<FeaturedFramesProps> = ({ products, loading = false }) => {
   const { handleAddStandard, handleAddFrameOnly, handleSelectPrescription } = useCart();
   const { formatPrice } = useCurrency();
 
-  // Filter for eyewear only, group products, and cap at strictly 8 groups for the 4x2 grid
+  // Safely extract and filter product groups, capped at 8 for the 4x2 grid
   const featuredGroups = useMemo(() => {
-    const eyewearOnly = products.filter(isEyewearProduct);
+    const rawList = extractProductsArray(products);
+    const eyewearOnly = rawList.filter(isEyewearProduct);
     return groupProductsByModel(eyewearOnly).slice(0, 8);
   }, [products]);
 
@@ -115,16 +133,29 @@ export const FeaturedFrames: React.FC<FeaturedFramesProps> = ({ products }) => {
       </div>
 
       {/* 4-COLUMN x 2-ROW PRODUCT GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-10">
-        {featuredGroups.map((group) => (
-          <ProductCard
-            key={group.groupKey}
-            group={group}
-            onAddToCart={handleAddToCart}
-            formatPrice={formatPrice}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-10">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <div key={n} className="bg-slate-50 rounded-2xl h-80 animate-pulse border border-slate-100" />
+          ))}
+        </div>
+      ) : featuredGroups.length === 0 ? (
+        <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-slate-100 max-w-md mx-auto my-6 space-y-3">
+          <Glasses className="w-8 h-8 text-slate-300 mx-auto" />
+          <p className="text-xs text-slate-500">New seasonal frames arrive soon. Browse full catalog below.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-10">
+          {featuredGroups.map((group) => (
+            <ProductCard
+              key={group.groupKey}
+              group={group}
+              onAddToCart={handleAddToCart}
+              formatPrice={formatPrice}
+            />
+          ))}
+        </div>
+      )}
 
       {/* CENTERED CTA BUTTON */}
       <div className="flex justify-center">

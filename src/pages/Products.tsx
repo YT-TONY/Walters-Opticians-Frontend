@@ -1,8 +1,10 @@
 // src/pages/Products.tsx
+
 import React, { useEffect, useState, useMemo } from 'react';
 import type { Product, GlassesPrescriptionData } from '../types';
 import { apiClient } from '../api/client';
 import { ProductCard, type ProductGroup } from '../components/ProductCard';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface ProductsProps {
   onAddToCart: (
@@ -12,14 +14,21 @@ interface ProductsProps {
   ) => void;
 }
 
+interface PaginatedProductsResponse {
+  items?: Product[];
+}
+
 // Groups individual colorway products into single card model groups
 const groupProductsByModel = (products: Product[]): ProductGroup[] => {
   const groupMap = new Map<string, Product[]>();
 
   products.forEach((product) => {
+    const brandStr = (product.brand || '').toLowerCase().trim();
+    const nameStr = (product.name || '').toLowerCase().trim();
+
     const groupKey = product.model_code && product.model_code.trim() !== ''
       ? product.model_code.toLowerCase().trim()
-      : `${product.brand.toLowerCase().trim()}-${product.name.toLowerCase().trim()}`;
+      : `${brandStr}-${nameStr}`;
 
     if (!groupMap.has(groupKey)) {
       groupMap.set(groupKey, []);
@@ -35,19 +44,30 @@ const groupProductsByModel = (products: Product[]): ProductGroup[] => {
 };
 
 export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
+  const { formatPrice } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState('');
   const [shapeFilter, setShapeFilter] = useState<string>('ALL');
 
   useEffect(() => {
     apiClient
-      .get<Product[]>('/products')
-      .then((res) => {
-        // Filter catalog to optical frames and sunglasses for this page
-        const frames = res.data.filter((p) => !p.category || p.category === 'optical_frames' || p.category === 'sunglasses');
-        setProducts(frames.length > 0 ? frames : res.data);
+      .get<Product[] | PaginatedProductsResponse>('/products/', {
+        params: {
+          eyewear_only: true,
+          page_size: 100,
+        },
       })
-      .catch(() => {
+      .then((res) => {
+        // Safely extract product array whether response is paginated or flat
+        const productList = Array.isArray(res.data) 
+          ? res.data 
+          : (res.data?.items || []);
+
+        setProducts(productList);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch products catalog:', err);
         // Fallback demo data with model_code groupings
         setProducts([
           {
@@ -90,18 +110,24 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
             is_active: true,
           },
         ]);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, []);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.brand.toLowerCase().includes(search.toLowerCase()) ||
-        p.color_description.toLowerCase().includes(search.toLowerCase()) ||
-        (p.model_code && p.model_code.toLowerCase().includes(search.toLowerCase()));
+    const query = search.toLowerCase().trim();
 
-      const matchesShape = shapeFilter === 'ALL' || p.shape.toLowerCase() === shapeFilter.toLowerCase();
+    return products.filter((p) => {
+      const nameMatch = (p.name || '').toLowerCase().includes(query);
+      const brandMatch = (p.brand || '').toLowerCase().includes(query);
+      const colorMatch = (p.color_description || '').toLowerCase().includes(query);
+      const modelMatch = (p.model_code || '').toLowerCase().includes(query);
+
+      const matchesSearch = !query || nameMatch || brandMatch || colorMatch || modelMatch;
+      const matchesShape = shapeFilter === 'ALL' || (p.shape || '').toLowerCase() === shapeFilter.toLowerCase();
+
       return matchesSearch && matchesShape;
     });
   }, [products, search, shapeFilter]);
@@ -147,25 +173,38 @@ export const Products: React.FC<ProductsProps> = ({ onAddToCart }) => {
         </div>
 
         {/* Catalog Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {productGroups.map((group) => (
-            <ProductCard
-              key={group.groupKey}
-              group={group}
-              formatPrice={(price) => `£${price.toFixed(2)}`}
-              onAddToCart={(product, option) => {
-                const optLower = option.toLowerCase();
-                if (optLower === 'just frames' || optLower === 'frames_only') {
-                  onAddToCart(product, 'frames_only');
-                } else if (optLower === 'prescription') {
-                  onAddToCart(product, 'prescription');
-                } else {
-                  onAddToCart(product, 'standard');
-                }
-              }}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <div key={n} className="bg-white/60 rounded-2xl h-80 animate-pulse border border-border" />
+            ))}
+          </div>
+        ) : productGroups.length === 0 ? (
+          <div className="text-center py-16 bg-white/40 rounded-2xl border border-border max-w-md mx-auto space-y-2">
+            <h3 className="font-serif text-lg text-navy font-semibold">No Optical Frames Found</h3>
+            <p className="text-xs text-slate">Try adjusting your search query or shape filter.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {productGroups.map((group) => (
+              <ProductCard
+                key={group.groupKey}
+                group={group}
+                formatPrice={formatPrice}
+                onAddToCart={(product, option) => {
+                  const optLower = option.toLowerCase();
+                  if (optLower === 'just frames' || optLower === 'frames_only') {
+                    onAddToCart(product, 'frames_only');
+                  } else if (optLower === 'prescription') {
+                    onAddToCart(product, 'prescription');
+                  } else {
+                    onAddToCart(product, 'standard');
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
 
       </div>
     </div>

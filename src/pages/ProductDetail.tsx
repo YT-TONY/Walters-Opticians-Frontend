@@ -1,3 +1,5 @@
+// src/pages/ProductDetail.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
@@ -14,12 +16,16 @@ import {
   ChevronRight,
   ZoomIn
 } from 'lucide-react';
-import axios from 'axios';
+import { apiClient } from '../api/client';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCart } from '../hooks/useCart';
 import type { Product, ContactLensPrescriptionData } from '../types/index';
 import { ProductSuggestionsBar } from '../components/ProductSuggestionsBar';
 import { Breadcrumb, type BreadcrumbItem } from '../components/Breadcrumb';
+
+interface PaginatedApiResponse {
+  items?: Product[];
+}
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,8 +79,7 @@ export const ProductDetail: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
-        const response = await axios.get<Product>(`${API_URL}/products/${id}`);
+        const response = await apiClient.get<Product>(`/products/${id}`);
         const currentProduct = response.data;
         setProduct(currentProduct);
 
@@ -87,14 +92,23 @@ export const ProductDetail: React.FC = () => {
           setOsColor(currentProduct.colors[0]);
         }
 
-        // Fetch sibling color variants matching the same model
-        const allProductsRes = await axios.get<Product[]>(`${API_URL}/products`);
-        const siblings = allProductsRes.data.filter((p) => {
+        // Fetch sibling color variants matching the same model code or brand/name
+        const allProductsRes = await apiClient.get<Product[] | PaginatedApiResponse>('/products/', {
+          params: { page_size: 100 }
+        });
+
+        const productList: Product[] = Array.isArray(allProductsRes.data)
+          ? allProductsRes.data
+          : (allProductsRes.data?.items || []);
+
+        const siblings = productList.filter((p) => {
           if (currentProduct.model_code && p.model_code) {
-            return p.model_code === currentProduct.model_code;
+            return p.model_code.trim().toLowerCase() === currentProduct.model_code.trim().toLowerCase();
           }
-          return p.name.toLowerCase() === currentProduct.name.toLowerCase() && 
-                 p.brand.toLowerCase() === currentProduct.brand.toLowerCase();
+          return (
+            (p.name || '').toLowerCase() === (currentProduct.name || '').toLowerCase() && 
+            (p.brand || '').toLowerCase() === (currentProduct.brand || '').toLowerCase()
+          );
         });
 
         setColorVariants(siblings);
@@ -117,7 +131,7 @@ export const ProductDetail: React.FC = () => {
     return cat.includes('contact') || cat.includes('lens') || product.is_contact_lens === true;
   }, [product]);
 
-  // Construct Breadcrumb items for your dedicated component
+  // Construct Breadcrumb items
   const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
     if (!product) return [];
 
@@ -825,7 +839,7 @@ export const ProductDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* PRODUCT SUGGESTIONS BAR (Filtered to Category context) */}
+      {/* PRODUCT SUGGESTIONS BAR */}
       <ProductSuggestionsBar
         contextPage="product"
         currentProduct={product}

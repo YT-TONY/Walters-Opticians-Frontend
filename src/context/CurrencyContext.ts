@@ -1,7 +1,8 @@
 // src/context/CurrencyContext.ts
+
 import { createContext } from 'react';
 
-export type CurrencyCode = 'GBP' | 'USD' | 'EUR' | 'NGN';
+export type CurrencyCode = string;
 
 export interface CurrencyDetails {
   symbol: string;
@@ -13,7 +14,7 @@ export interface CurrencyDetails {
 
 export interface CurrencyContextType {
   currency: CurrencyCode;
-  countryCode: string; // ISO 2-letter country code (e.g., 'nl', 'gb', 'us')
+  countryCode: string;
   symbol: string;
   flag: string;
   setCurrency: (code: CurrencyCode) => void;

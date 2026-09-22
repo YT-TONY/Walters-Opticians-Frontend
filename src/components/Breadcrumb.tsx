@@ -1,7 +1,8 @@
 // src/components/Breadcrumb.tsx
+
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Home, ChevronRight } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 
 export interface BreadcrumbItem {
   label: string;
@@ -13,23 +14,40 @@ interface BreadcrumbProps {
 }
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
+  const [searchParams] = useSearchParams();
+
+  // Hide breadcrumb navigation on search results view
+  if (searchParams.get('search')) {
+    return null;
+  }
+
   return (
-    <nav className="w-full bg-slate-100/80 border-b border-slate-200 py-3.5 px-6 sm:px-10 lg:px-16">
-      <div className="max-w-[1600px] mx-auto flex items-center space-x-2.5 text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-700">
-        <Link to="/" className="hover:text-walters-navy flex items-center gap-1.5 transition-colors font-normal text-slate-700 hover:underline">
-          <Home className="w-4 h-4 text-walters-navy shrink-0" />
-          <span>Home</span>
+    <nav 
+      aria-label="Breadcrumb Navigation"
+      className="w-full bg-slate-50/80 backdrop-blur-md border-b border-slate-200/60 py-3 px-6 sm:px-10 lg:px-16 select-none"
+    >
+      <div className="max-w-[1600px] mx-auto flex items-center space-x-1.5 text-[11px] sm:text-xs font-normal tracking-tight text-slate-500">
+        <Link 
+          to="/" 
+          className="text-slate-500 hover:text-slate-900 transition-colors duration-150 font-normal"
+        >
+          Home
         </Link>
 
         {items.map((item, idx) => {
           const isLast = idx === items.length - 1;
           return (
-            <React.Fragment key={item.label}>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <React.Fragment key={`${item.label}-${idx}`}>
+              <ChevronRight className="w-3 h-3 text-slate-400 shrink-0 opacity-70" />
               {isLast || !item.path ? (
-                <span className="text-walters-navy font-bold truncate tracking-wide">{item.label}</span>
+                <span className="text-slate-900 font-semibold truncate tracking-normal">
+                  {item.label}
+                </span>
               ) : (
-                <Link to={item.path} className="hover:text-walters-navy transition-colors truncate text-slate-700 font-semibold hover:underline">
+                <Link 
+                  to={item.path} 
+                  className="text-slate-500 hover:text-slate-900 transition-colors duration-150 truncate"
+                >
                   {item.label}
                 </Link>
               )}

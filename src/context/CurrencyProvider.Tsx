@@ -1,17 +1,15 @@
-// src/context/CurrencyProvider.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { CurrencyContext, type CurrencyCode, type CurrencyDetails } from './CurrencyContext';
 
-const DEFAULT_CURRENCIES: Record<string, CurrencyDetails & { defaultCountry: string }> = {
+const DEFAULT_CURRENCIES: Record<string, CurrencyDetails> = {
   GBP: { symbol: '£', label: 'GBP (£)', flag: '🇬🇧', defaultRate: 1, defaultCountry: 'gb' },
   USD: { symbol: '$', label: 'USD ($)', flag: '🇺🇸', defaultRate: 1.28, defaultCountry: 'us' },
   EUR: { symbol: '€', label: 'EUR (€)', flag: '🇪🇺', defaultRate: 1.17, defaultCountry: 'eu' },
   NGN: { symbol: '₦', label: 'NGN (₦)', flag: '🇳🇬', defaultRate: 2050, defaultCountry: 'ng' },
 };
 
-// Expanded currency symbol lookup for dynamic ingestion
 const CURRENCY_SYMBOLS: Record<string, string> = {
-  CHF: 'CHF ',
+  CHF: 'Fr. ',
   CAD: 'CA$',
   AUD: 'AU$',
   JPY: '¥',
@@ -33,10 +31,9 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
   const [loading, setLoading] = useState(true);
 
-  // Manual currency change updates state and synced ISO flag country
   const setCurrency = (code: string) => {
-    setCurrencyState(code as CurrencyCode);
-    const targetDetails = availableCurrencies[code] as (CurrencyDetails & { defaultCountry?: string }) | undefined;
+    setCurrencyState(code);
+    const targetDetails = availableCurrencies[code];
     const targetCountry = targetDetails?.defaultCountry || code.slice(0, 2).toLowerCase();
 
     setCountryCode(targetCountry);
@@ -44,7 +41,6 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('walters_user_country', targetCountry);
   };
 
-  // 1. Fetch real-time exchange rates relative to GBP
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/GBP')
       .then((res) => res.json())
@@ -58,13 +54,12 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
   }, []);
 
-  // 2. Dynamic IP Geolocation & Dynamic Currency/Country Ingestion
   useEffect(() => {
     const savedCurrency = localStorage.getItem('walters_user_currency');
     const savedCountry = localStorage.getItem('walters_user_country');
 
     if (savedCurrency) {
-      setCurrencyState(savedCurrency as CurrencyCode);
+      setCurrencyState(savedCurrency);
       if (savedCountry) setCountryCode(savedCountry);
       setLoading(false);
       return;
@@ -81,10 +76,9 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
 
         if (detectedCurrency) {
-          // Dynamically register unlisted local currencies (e.g. LRD, CHF)
           if (!DEFAULT_CURRENCIES[detectedCurrency]) {
             const dynamicSymbol = CURRENCY_SYMBOLS[detectedCurrency] || `${detectedCurrency} `;
-            const dynamicDetails: CurrencyDetails & { defaultCountry: string } = {
+            const dynamicDetails: CurrencyDetails = {
               symbol: dynamicSymbol,
               label: `${detectedCurrency} (${dynamicSymbol.trim()})`,
               flag: detectedCountry || '🌐',
@@ -98,7 +92,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }));
           }
 
-          setCurrencyState(detectedCurrency as CurrencyCode);
+          setCurrencyState(detectedCurrency);
         } else {
           setCurrencyState('GBP');
           setCountryCode('gb');
@@ -124,14 +118,14 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const formatPrice = useCallback(
     (amountInGbp: number): string => {
       const converted = convertPrice(amountInGbp);
-      const symbol = availableCurrencies[currency]?.symbol || '£';
+      const activeSymbol = availableCurrencies[currency]?.symbol || '£';
 
       if (currency === 'NGN') {
-        return `${symbol}${Math.round(converted).toLocaleString('en-NG')}`;
+        return `${activeSymbol}${Math.round(converted).toLocaleString('en-NG')}`;
       }
 
-      return `${symbol}${converted.toLocaleString(undefined, {
-        minimumFractionDigits: 0,
+      return `${activeSymbol}${converted.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`;
     },
@@ -155,10 +149,10 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         countryCode,
         symbol: activeSymbol,
         flag: activeFlag,
-        setCurrency: (code) => setCurrency(code as CurrencyCode),
+        setCurrency,
         formatPrice,
         convertPrice,
-        availableCurrencies: availableCurrencies as Record<CurrencyCode, CurrencyDetails>,
+        availableCurrencies,
         loading,
       }}
     >

@@ -1,5 +1,3 @@
-//src/pages/ProductDetail.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
@@ -21,6 +19,7 @@ import { useCurrency } from '../hooks/useCurrency';
 import { useCart } from '../hooks/useCart';
 import type { Product, ContactLensPrescriptionData } from '../types/index';
 import { ProductSuggestionsBar } from '../components/ProductSuggestionsBar';
+import { Breadcrumb, type BreadcrumbItem } from '../components/Breadcrumb';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -116,6 +115,31 @@ export const ProductDetail: React.FC = () => {
     if (!product) return false;
     const cat = (product.category || '').toLowerCase();
     return cat.includes('contact') || cat.includes('lens') || product.is_contact_lens === true;
+  }, [product]);
+
+  // Construct Breadcrumb items for your dedicated component
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
+    if (!product) return [];
+
+    let categoryLabel = 'Optical Frames';
+    const cat = (product.category || '').toLowerCase();
+    if (cat.includes('sunglasses')) categoryLabel = 'Sunglasses';
+    else if (cat.includes('contact')) categoryLabel = 'Contact Lenses';
+    else if (cat.includes('care')) categoryLabel = 'Lens Care';
+
+    return [
+      {
+        label: categoryLabel,
+        path: `/catalog?category=${encodeURIComponent(product.category || '')}`,
+      },
+      {
+        label: product.brand,
+        path: `/catalog?brand=${encodeURIComponent(product.brand)}`,
+      },
+      {
+        label: product.name,
+      },
+    ];
   }, [product]);
 
   // Construct deduplicated image list starting with primary card image
@@ -250,17 +274,15 @@ export const ProductDetail: React.FC = () => {
   const hasColorOptions = product.colors && product.colors.length > 0;
 
   return (
-    <div className="min-h-screen bg-walters-cream/30 py-10 font-sans text-walters-charcoal antialiased">
+    <div className="min-h-screen bg-walters-cream/30 pb-10 font-sans text-walters-charcoal antialiased">
       
       {/* CONSTRAINED MAIN PDP CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 mb-16">
-        <Link 
-          to="/" 
-          className="inline-flex items-center space-x-2 text-xs font-light text-walters-charcoal/60 hover:text-walters-navy mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Collection</span>
-        </Link>
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 pt-6 mb-16">
+        
+        {/* BREADCRUMB COMPONENT ALIGNED TO MAIN PDP CONTAINER */}
+        <div className="mb-6 [&_nav]:bg-transparent [&_nav]:border-none [&_nav]:py-0 [&_nav]:px-0 [&_nav_div]:max-w-none">
+          <Breadcrumb items={breadcrumbItems} />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
           

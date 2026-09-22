@@ -1,7 +1,8 @@
 // src/components/ProductCard.tsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Eye, ShoppingBag, Star, Loader2 } from 'lucide-react';
+import { Heart, Eye, ShoppingBag, Loader2 } from 'lucide-react';
 import type { Product } from '../types/index';
 import { useFavorite } from '../hooks/useFavorite';
 
@@ -18,7 +19,6 @@ interface ProductCardProps {
 }
 
 const getColorSwatchStyle = (colorDesc: string, colorCode?: string): React.CSSProperties => {
-  // 1. Direct color_code from backend DB (Hex, CSS gradient, or raw hex code)
   if (colorCode && colorCode.trim() !== '') {
     const trimmedCode = colorCode.trim();
     if (
@@ -31,20 +31,17 @@ const getColorSwatchStyle = (colorDesc: string, colorCode?: string): React.CSSPr
         ? { background: trimmedCode }
         : { backgroundColor: trimmedCode };
     }
-    // Standard 3 or 6 digit hex code without '#' prefix
     if (/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(trimmedCode)) {
       return { backgroundColor: `#${trimmedCode}` };
     }
   }
 
-  // 2. Extract embedded hex code inside description string if available
   const lower = colorDesc.toLowerCase();
   const hexMatch = lower.match(/#([0-9a-f]{3,6})/i);
   if (hexMatch) {
     return { backgroundColor: hexMatch[0] };
   }
 
-  // 3. Eyewear & Luxury Pattern Matching Fallback
   if (lower.includes('tortoise') || lower.includes('havana') || lower.includes('amber')) {
     return { background: 'linear-gradient(135deg, #4a2810 0%, #b45309 50%, #d97706 100%)' };
   }
@@ -79,7 +76,6 @@ const getColorSwatchStyle = (colorDesc: string, colorCode?: string): React.CSSPr
     return { background: 'linear-gradient(135deg, #e2e8f0 0%, #ffffff 100%)' };
   }
 
-  // 4. Default Neutral Fallback
   return { backgroundColor: '#64748b' };
 };
 
@@ -103,7 +99,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const isWishlisted = isFavorite(activeVariant.id);
   const isOutOfStock = activeVariant.stock_quantity <= 0;
 
-  // Dynamic Badge Logic
   const getBadgeInfo = () => {
     if (isOutOfStock) {
       return {
@@ -156,7 +151,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const handleBrandClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (activeVariant.brand) {
-      navigate(`/catalog?brand=${encodeURIComponent(activeVariant.brand)}`);
+      const slug = activeVariant.brand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      navigate(`/brands/${slug}`);
     }
   };
 
@@ -184,10 +180,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       onClick={handleCardClick}
       className="group relative flex flex-col cursor-pointer select-none transition-all duration-300"
     >
-      {/* 1. Large Rounded Rectangle Image Container */}
       <div className="relative w-full aspect-square bg-[#fffefcf3] rounded-3xl overflow-hidden flex items-center justify-center p-6 transition-all group-hover:shadow-md">
         
-        {/* Top-Left Overlay: Dynamic Interactive Pill Badge */}
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
           <button
             type="button"
@@ -198,7 +192,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </button>
         </div>
 
-        {/* Top-Right Overlay: Quick Actions */}
         <div className="absolute top-4 right-4 z-10 flex flex-col space-y-2.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
           <button
             type="button"
@@ -241,7 +234,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </button>
         </div>
 
-        {/* Product Image */}
         <img
           src={activeVariant.image_url || ''}
           alt={activeVariant.name}
@@ -251,29 +243,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         />
       </div>
 
-      {/* 2. Product Details Block */}
       <div className="pt-3.5 px-1 space-y-1">
-        {/* Top Row: Brand & Rating */}
         <div className="flex items-center justify-between text-xs text-walters-charcoal/60 font-medium">
           <button
             type="button"
             onClick={handleBrandClick}
-            className="uppercase tracking-wider truncate max-w-[70%] hover:underline hover:text-walters-navy text-left cursor-pointer"
+            className="uppercase tracking-wider truncate max-w-[85%] font-semibold text-slate-700 hover:underline hover:text-walters-navy text-left cursor-pointer"
           >
             {activeVariant.brand || activeVariant.category || 'Walters'}
           </button>
-          <div className="flex items-center space-x-1 text-walters-navy shrink-0">
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-semibold tabular-nums">4.9</span>
-          </div>
         </div>
 
-        {/* Middle Row: Product Name */}
         <h3 className="font-semibold text-sm sm:text-base text-walters-navy tracking-tight line-clamp-1">
           {activeVariant.name}
         </h3>
 
-        {/* Bottom Row: Pricing */}
         <div className="flex items-baseline space-x-2 pt-0.5">
           <span className="font-bold text-sm sm:text-base text-walters-navy tabular-nums">
             {formatPrice(activeVariant.price_full_gbp)}
@@ -285,7 +269,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        {/* Swatches */}
         {group.variants.length > 1 && (
           <div className="flex items-center space-x-1.5 pt-2" onClick={(e) => e.stopPropagation()}>
             {group.variants.map((variant) => {

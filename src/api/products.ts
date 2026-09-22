@@ -1,3 +1,5 @@
+//src/api/products.ts
+
 import { apiClient } from './client';
 
 export interface ProductFilterParams {

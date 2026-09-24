@@ -1,5 +1,7 @@
 // src/components/megamenu/MegaMenuTabNav.tsx
+
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import type { Category } from '../../context/Category';
 import { BrandsVirtualCategory } from './constants';
@@ -19,12 +21,14 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
   onSelectCategory,
   onClose,
 }) => {
+  const navigate = useNavigate();
+
   const cleanCategories = categories.filter((cat) => {
     const slugLower = cat.slug.toLowerCase();
     const nameLower = cat.name.toLowerCase();
-    
+
     if (slugLower.includes('contact')) return true;
-    
+
     return !EXCLUDED_CATEGORY_SLUGS.some(
       (ex) => slugLower === ex || nameLower === ex || nameLower === 'to notice'
     );
@@ -42,16 +46,24 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
     finalCategories.splice(2, 0, BrandsVirtualCategory);
   }
 
+  const handleTabClick = (cat: Category) => {
+    onSelectCategory(cat.id);
+
+    // NAVIGATE DIRECTLY TO CATALOG FOR CATEGORY TABS
+    if (cat.id !== BrandsVirtualCategory.id && cat.slug.toLowerCase() !== 'sale') {
+      navigate(`/catalog?category=${cat.slug}`);
+      onClose();
+    }
+  };
+
   return (
     <div className="w-full bg-white">
-      {/* Container aligned with max-w-7xl mx-auto px-8 */}
       <div className="max-w-7xl mx-auto px-8 flex items-center justify-between h-11">
         <nav className="flex items-center space-x-8 tracking-wider overflow-x-auto no-scrollbar">
           {finalCategories.map((cat) => {
             const isActive = cat.id === activeCategoryId;
             const isSale = cat.slug.toLowerCase() === 'sale' || cat.name.toLowerCase() === 'sale';
-            
-            // Format display name: 'Contact Lenses' -> 'Contacts'
+
             const displayName = cat.name.toLowerCase().includes('contact') ? 'Contacts' : cat.name;
 
             if (isSale) {
@@ -60,7 +72,7 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
                   key={cat.id}
                   type="button"
                   onMouseEnter={() => onSelectCategory(cat.id)}
-                  onClick={() => onSelectCategory(cat.id)}
+                  onClick={() => handleTabClick(cat)}
                   className={`py-2.5 text-xs font-bold uppercase transition-all border-b-2 cursor-pointer ${
                     isActive
                       ? 'border-rose-600 text-rose-600'
@@ -77,7 +89,7 @@ export const MegaMenuTabNav: React.FC<MegaMenuTabNavProps> = ({
                 key={cat.id}
                 type="button"
                 onMouseEnter={() => onSelectCategory(cat.id)}
-                onClick={() => onSelectCategory(cat.id)}
+                onClick={() => handleTabClick(cat)}
                 className={`py-2.5 text-xs uppercase font-semibold transition-all border-b-2 cursor-pointer ${
                   isActive
                     ? 'border-walters-gold text-walters-navy font-bold'

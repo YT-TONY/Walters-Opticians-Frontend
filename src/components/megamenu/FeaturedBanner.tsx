@@ -1,4 +1,5 @@
-// src/components/megamenu/FeatureBanner.tsx
+// src/components/megamenu/FeaturedBanner.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
@@ -30,7 +31,7 @@ const SUNGLASSES_FEATURE_CARDS = [
     title: "People's Favorite",
     subtitle: 'All-time best sellers rated by volume',
     image: '/IMAGES/COVERS/CLASSICS.webp',
-    query: 'filter=best-sellers',
+    query: 'sort_by=popularity',
   },
 ];
 
@@ -42,7 +43,6 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
 }) => {
   const isSunglasses = categorySlug.toLowerCase().includes('sunglass');
 
-  // Sunglasses Layout: 3 Cards aligned to the right edge of Top Brands
   if (isSunglasses) {
     return (
       <div className="grid grid-cols-3 gap-5 w-189 pt-2">
@@ -53,7 +53,6 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
             onClick={onItemClick}
             className="group flex flex-col space-y-2"
           >
-            {/* Taller Height (h-52) with Rounded Corners */}
             <div className="w-full h-56 overflow-hidden relative bg-slate-100 shadow-xs">
               <img
                 src={card.image}
@@ -61,7 +60,6 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
-            {/* Title & Subtitle */}
             <div>
               <h5 className="text-sm font-semibold text-walters-navy group-hover:text-amber-600 transition-colors">
                 {card.title}
@@ -76,7 +74,6 @@ export const FeatureBanner: React.FC<FeatureBannerProps> = ({
     );
   }
 
-  // Optical Glasses Layout: Tall Portrait Banner Card
   return (
     <div className="w-76 h-84 shrink-0 relative overflow-hidden shadow-2xs group">
       <img

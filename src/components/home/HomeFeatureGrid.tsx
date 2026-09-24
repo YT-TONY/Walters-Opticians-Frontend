@@ -1,4 +1,5 @@
 // src/components/home/HomeFeatureGrid.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -19,7 +20,7 @@ const FEATURE_CARDS: FeatureCard[] = [
     title: 'Italian Acetate & High-End Craft',
     description: 'Exquisite designer frames hand-finished with titanium precision and luxury detail.',
     buttonText: 'Shop Luxury',
-    link: '/catalog?filter=luxury',
+    link: '/catalog?tag=luxury',
     image: '/IMAGES/HOMEPAGE/LUXURY_BANNER.png',
   },
   {
@@ -28,7 +29,7 @@ const FEATURE_CARDS: FeatureCard[] = [
     title: 'Premium Quality, Budget Friendly',
     description: 'Durable, stylish prescription glasses engineered for comfort without breaking the bank.',
     buttonText: 'Shop Budget',
-    link: '/catalog?filter=budget',
+    link: '/catalog?tag=budget',
     image: '/IMAGES/HOMEPAGE/BUDGET_BANNER.png',
   },
   {
@@ -51,17 +52,14 @@ export const HomeFeatureGrid: React.FC = () => {
             key={card.id}
             className="relative h-128 w-full rounded-2xl overflow-hidden group border border-neutral-200/80 shadow-xs bg-neutral-900 flex flex-col justify-end"
           >
-            {/* Background Image */}
             <img
               src={card.image}
               alt={card.title}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90"
             />
 
-            {/* Dark Gradient Overlay for Typography Readability */}
             <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
-            {/* Card Content Overlay */}
             <div className="relative z-10 p-8 flex flex-col justify-end h-full">
               {card.badge && (
                 <span className="inline-block text-[10px] font-black uppercase tracking-widest text-walters-gold bg-walters-navy/85 backdrop-blur-xs px-3 py-1 rounded-sm w-fit mb-3">

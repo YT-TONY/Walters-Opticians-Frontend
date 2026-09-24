@@ -1,4 +1,5 @@
 // src/components/megamenu/MegaMenuSubCategoryList.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Category } from '../../context/Category';
@@ -42,7 +43,6 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
       </h3>
 
       <nav className="flex flex-col space-y-2 text-sm font-medium">
-        {/* Demographic Links */}
         {demographicList.map((sub) => (
           <Link
             key={sub.slug}
@@ -54,32 +54,31 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
           </Link>
         ))}
 
-        {/* Curated Filters for Sunglasses */}
         {isSunglasses && (
           <>
             <Link
-              to={`/catalog?category=${categorySlug}&filter=new-arrivals`}
+              to={`/catalog?category=${categorySlug}&sort_by=newest`}
               onClick={onItemClick}
               className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               New Arrivals
             </Link>
             <Link
-              to={`/catalog?category=${categorySlug}&filter=best-sellers`}
+              to={`/catalog?category=${categorySlug}&sort_by=popularity`}
               onClick={onItemClick}
               className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               Best Sellers
             </Link>
             <Link
-              to={`/catalog?category=${categorySlug}&brand=ray-ban-meta`}
+              to={`/catalog?category=${categorySlug}&brand=ray-ban`}
               onClick={onItemClick}
               className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
               Ray-Ban Meta
             </Link>
             <Link
-              to={`/catalog?category=${categorySlug}&brand=oakley-meta`}
+              to={`/catalog?category=${categorySlug}&brand=oakley`}
               onClick={onItemClick}
               className="text-neutral-700 hover:text-amber-600 hover:translate-x-1 transition-all py-0.5 block"
             >
@@ -88,7 +87,6 @@ export const MegaMenuSubCategoryList: React.FC<MegaMenuSubCategoryListProps> = (
           </>
         )}
 
-        {/* Single Red Sale Link */}
         {!isSaleCategory && (
           <Link
             to={`/catalog?category=${categorySlug}&on_sale=true`}

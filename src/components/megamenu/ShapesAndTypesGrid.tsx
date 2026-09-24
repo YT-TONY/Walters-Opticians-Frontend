@@ -1,4 +1,5 @@
 // src/components/megamenu/ShapesAndTypesGrid.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -16,7 +17,7 @@ interface TypeItem {
 
 const OPTICAL_SHAPES: ShapeItem[] = [
   { name: 'Aviator', slug: 'aviator', image: '/IMAGES/GLASSES/SHAPE/AVIATOR.png' },
-  { name: 'Cat Eye', slug: 'cat-eye', image: '/IMAGES/GLASSES/SHAPE/CATEYE.png' },
+  { name: 'Cat Eye', slug: 'cateye', image: '/IMAGES/GLASSES/SHAPE/CATEYE.png' },
   { name: 'Wayfarer', slug: 'wayfarer', image: '/IMAGES/GLASSES/SHAPE/WAYFAYER.png' },
   { name: 'Round', slug: 'round', image: '/IMAGES/GLASSES/SHAPE/ROUND.png' },
   { name: 'Square', slug: 'square', image: '/IMAGES/GLASSES/SHAPE/SQUARE.png' },
@@ -30,7 +31,7 @@ const SUNGLASS_SHAPES: ShapeItem[] = [
   { name: 'Wayfarer', slug: 'wayfarer', image: '/IMAGES/SUNGLASSES/WAYFAYER.png' },
   { name: 'Oval', slug: 'oval', image: '/IMAGES/SUNGLASSES/OVAL.png' },
   { name: 'Square', slug: 'square', image: '/IMAGES/SUNGLASSES/SQUARE.png' },
-  { name: 'Cat Eye', slug: 'cat-eye', image: '/IMAGES/SUNGLASSES/CATEYE.png' },
+  { name: 'Cat Eye', slug: 'cateye', image: '/IMAGES/SUNGLASSES/CATEYE.png' },
   { name: 'Wraparound', slug: 'wraparound', image: '/IMAGES/SUNGLASSES/WRAP AROUND.png' },
   { name: 'Round', slug: 'round', image: '/IMAGES/SUNGLASSES/ROUND.png' },
   { name: 'Browline', slug: 'browline', image: '/IMAGES/SUNGLASSES/BROWLINE.png' },
@@ -56,7 +57,6 @@ export const ShapesAndTypesGrid: React.FC<ShapesAndTypesGridProps> = ({
 
   return (
     <div className="w-115 shrink-0 space-y-5">
-      {/* Popular Shapes Grid - Vector Display */}
       <div>
         <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">
           Popular Shapes
@@ -82,7 +82,6 @@ export const ShapesAndTypesGrid: React.FC<ShapesAndTypesGridProps> = ({
         </div>
       </div>
 
-      {/* Optical Frame Rim Types - Vector Display */}
       {!isSunglasses && (
         <div>
           <h4 className="text-xs font-bold uppercase tracking-widest text-walters-navy mb-3">

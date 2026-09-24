@@ -1,4 +1,5 @@
 // src/components/megamenu/ContactLensesGrid.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -33,9 +34,7 @@ const CONTACT_BRANDS = [
 export const ContactLensesGrid: React.FC<ContactLensesGridProps> = ({ onClose }) => {
   return (
     <div className="flex items-start justify-between gap-8 py-2">
-      {/* LEFT COLUMN: Subcategories Grouped by Frequency & Lens Type */}
       <div className="w-56 space-y-6 shrink-0">
-        {/* Frequency Group */}
         <div>
           <h3 className="text-amber-600 font-semibold text-base tracking-wide mb-2.5">
             Frequency
@@ -55,7 +54,6 @@ export const ContactLensesGrid: React.FC<ContactLensesGridProps> = ({ onClose })
           </ul>
         </div>
 
-        {/* Lens Type Group */}
         <div>
           <h3 className="text-amber-600 font-semibold text-base tracking-wide mb-2.5">
             Lens Type
@@ -76,7 +74,6 @@ export const ContactLensesGrid: React.FC<ContactLensesGridProps> = ({ onClose })
         </div>
       </div>
 
-      {/* MIDDLE COLUMN: Expanded 2x3 Brand Logo Grid */}
       <div className="flex-1 max-w-lg">
         <div className="grid grid-cols-2 gap-4">
           {CONTACT_BRANDS.map((brand) => (
@@ -102,7 +99,6 @@ export const ContactLensesGrid: React.FC<ContactLensesGridProps> = ({ onClose })
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Larger Promotional Banner Tile */}
       <div className="w-97.5 shrink-0">
         <Link
           to="/catalog?category=contact_lenses"

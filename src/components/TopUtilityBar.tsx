@@ -33,7 +33,7 @@ export const TopUtilityBar: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full bg-[#0B132B]/95 backdrop-blur-md text-white text-[11px] font-sans py-1.5 px-4 sm:px-6 lg:px-8 border-b border-white/10 antialiased transition-all duration-300">
+    <div className="w-full bg-walters-navy backdrop-blur-md text-white text-[11px] font-sans py-1.5 px-4 sm:px-6 lg:px-8 border-b border-white/10 antialiased transition-all duration-300">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
         
         {/* Left/Center Promo Text */}

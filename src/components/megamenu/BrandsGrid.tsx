@@ -1,4 +1,5 @@
 // src/components/megamenu/BrandsGrid.tsx
+
 import React, { useState, useMemo, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import type { Brand } from '../../context/Category';
@@ -158,7 +159,7 @@ export const BrandsGrid: React.FC<BrandsGridProps> = ({
             </Link>
           ))}
           <Link
-            to="/catalog?view=brands"
+            to="/catalog"
             onClick={onClose}
             className="flex items-center justify-center p-3 bg-walters-navy text-white hover:bg-slate-800 transition-all text-xs font-bold tracking-wider uppercase h-17 rounded-xl shadow-xs"
           >

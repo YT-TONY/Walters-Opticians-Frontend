@@ -1,7 +1,7 @@
 // src/pages/Catalog.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import type { Product } from '../types/index';
 import { ProductCard, type ProductGroup } from '../components/ProductCard';
@@ -66,6 +66,7 @@ const groupProductsByModel = (products: Product[]): ProductGroup[] => {
 };
 
 export const Catalog: React.FC = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<ExtendedApiProduct[]>([]);
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -89,20 +90,26 @@ export const Catalog: React.FC = () => {
   const { handleAddStandard, handleAddFrameOnly, handleSelectPrescription } = useCart();
   const { formatPrice } = useCurrency();
 
-  // Replaced problematic synchronous useEffect with standard React render-phase update
-  const [prevParamsKey, setPrevParamsKey] = useState('');
-  const currentParamsKey = `${searchQueryParam}|${categoryParam}|${brandParam}|${JSON.stringify(drawerFilters)}`;
+  useEffect(() => {
+    if (brandParam.trim()) {
+      const slug = brandParam.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      navigate(`/brands/${slug}`, { replace: true });
+    }
+  }, [brandParam, navigate]);
+
+  const currentParamsKey = `${searchQueryParam}|${categoryParam}|${JSON.stringify(drawerFilters)}`;
+  const [prevParamsKey, setPrevParamsKey] = useState(currentParamsKey);
   
   if (currentParamsKey !== prevParamsKey) {
     setPrevParamsKey(currentParamsKey);
     setPage(1);
-    setProducts([]);
     setLocalSearchInput(searchQueryParam);
   }
 
-  // Fetch paginated chunk directly from SQLite / FastAPI
   useEffect(() => {
     const fetchCatalogBatch = async () => {
+      if (brandParam) return;
+
       const isFirstPage = page === 1;
 
       if (isFirstPage) {
@@ -112,26 +119,59 @@ export const Catalog: React.FC = () => {
       }
 
       try {
+        const queryParams = new URLSearchParams();
+        
+        if (searchQueryParam) queryParams.append('q', searchQueryParam);
+        
+        if (categoryParam) {
+          queryParams.append('category', categoryParam);
+        } else {
+          // EXCLUSION WORKAROUND: If no category is selected ("All Frames"), explicitly request 
+          // eyeglasses and sunglasses. This safely filters out contact lenses.
+          queryParams.append('category', 'eyeglasses');
+          queryParams.append('category', 'sunglasses');
+        }
+
+        if (drawerFilters.sortBy) queryParams.append('sort_by', drawerFilters.sortBy);
+
+        // ALIAS WORKAROUND: Append both singular and plural keys to satisfy strict FastAPI validation
+        drawerFilters.gender.forEach((v) => {
+          queryParams.append('gender', v.toLowerCase());
+          queryParams.append('genders', v.toLowerCase());
+        });
+        drawerFilters.shapes.forEach((v) => {
+          queryParams.append('shape', v.toLowerCase());
+          queryParams.append('shapes', v.toLowerCase());
+        });
+        drawerFilters.colors.forEach((v) => {
+          queryParams.append('color', v.toLowerCase());
+          queryParams.append('colors', v.toLowerCase());
+        });
+        drawerFilters.frameMaterials.forEach((v) => {
+          queryParams.append('frame_material', v);
+          queryParams.append('frame_materials', v);
+          queryParams.append('materials', v);
+        });
+        drawerFilters.lensTypes.forEach((v) => {
+          queryParams.append('lens_type', v);
+          queryParams.append('lens_types', v);
+        });
+        drawerFilters.sizes.forEach((v) => {
+          queryParams.append('size', v.toUpperCase());
+          queryParams.append('sizes', v.toUpperCase());
+        });
+
+        // Add bounds
+        if (drawerFilters.priceRange[0] > 0) queryParams.append('min_price', Math.floor(drawerFilters.priceRange[0]).toString());
+        if (drawerFilters.priceRange[1] < 2000) queryParams.append('max_price', Math.ceil(drawerFilters.priceRange[1]).toString());
+        if (drawerFilters.lensWidthRange[0] > 38) queryParams.append('min_width', drawerFilters.lensWidthRange[0].toString());
+        if (drawerFilters.lensWidthRange[1] < 69) queryParams.append('max_width', drawerFilters.lensWidthRange[1].toString());
+
+        queryParams.append('page', page.toString());
+        queryParams.append('page_size', BATCH_PAGE_SIZE.toString());
+
         const res = await apiClient.get<CatalogApiResponse | ExtendedApiProduct[]>('/products/', {
-          params: {
-            q: searchQueryParam || undefined,
-            category: categoryParam || undefined,
-            brand: brandParam || undefined,
-            eyewear_only: !categoryParam,
-            sort_by: drawerFilters.sortBy,
-            genders: drawerFilters.gender.length ? drawerFilters.gender.join(',') : undefined,
-            shapes: drawerFilters.shapes.length ? drawerFilters.shapes.join(',') : undefined,
-            colors: drawerFilters.colors.length ? drawerFilters.colors.join(',') : undefined,
-            materials: drawerFilters.frameMaterials.length ? drawerFilters.frameMaterials.join(',') : undefined,
-            lens_types: drawerFilters.lensTypes.length ? drawerFilters.lensTypes.join(',') : undefined,
-            sizes: drawerFilters.sizes.length ? drawerFilters.sizes.join(',') : undefined,
-            min_price: drawerFilters.priceRange[0] > 0 ? Math.floor(drawerFilters.priceRange[0]) : undefined,
-            max_price: drawerFilters.priceRange[1] < 2000 ? Math.ceil(drawerFilters.priceRange[1]) : undefined,
-            min_width: drawerFilters.lensWidthRange[0] > 38 ? drawerFilters.lensWidthRange[0] : undefined,
-            max_width: drawerFilters.lensWidthRange[1] < 69 ? drawerFilters.lensWidthRange[1] : undefined,
-            page: page,
-            page_size: BATCH_PAGE_SIZE,
-          },
+          params: queryParams,
         });
 
         if (Array.isArray(res.data)) {
@@ -165,22 +205,7 @@ export const Catalog: React.FC = () => {
     };
 
     fetchCatalogBatch();
-    // Added specific object properties to dependency array to satisfy ESLint exhaustive-deps safely
-  }, [
-    page, 
-    searchQueryParam, 
-    categoryParam, 
-    brandParam, 
-    drawerFilters.colors,
-    drawerFilters.frameMaterials,
-    drawerFilters.gender,
-    drawerFilters.lensTypes,
-    drawerFilters.lensWidthRange,
-    drawerFilters.priceRange,
-    drawerFilters.shapes,
-    drawerFilters.sizes,
-    drawerFilters.sortBy
-  ]);
+  }, [page, searchQueryParam, categoryParam, brandParam, drawerFilters]);
 
   const productGroups = useMemo(() => {
     return groupProductsByModel(products);
@@ -190,6 +215,16 @@ export const Catalog: React.FC = () => {
     if (page < totalPages) {
       setPage((prevPage) => prevPage + 1);
     }
+  };
+
+  const handleCategoryPillClick = (catSlug: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (catSlug) {
+      nextParams.set('category', catSlug);
+    } else {
+      nextParams.delete('category');
+    }
+    setSearchParams(nextParams);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -249,7 +284,7 @@ export const Catalog: React.FC = () => {
 
       {!searchQueryParam && (
         <div 
-          className="relative text-white py-14 sm:py-20 px-8 lg:px-12 shadow-md overflow-hidden"
+          className="relative text-white py-14 sm:py-20 px-8 lg:px-12 shadow-md overflow-hidden animate-blur-in"
           style={{ background: HERO_FALLBACK_GRADIENT }}
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(197,162,101,0.18),transparent_55%)] pointer-events-none" />
@@ -264,8 +299,6 @@ export const Catalog: React.FC = () => {
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal text-white">
               {isContactCategory 
                 ? 'Contact Lenses & Care' 
-                : brandParam
-                ? `${brandParam} Eyewear`
                 : categoryParam
                 ? `${categoryParam.replace(/_/g, ' ')}`
                 : 'Designer Frames & Sunglasses'}
@@ -288,20 +321,42 @@ export const Catalog: React.FC = () => {
                 ? `Search: "${searchQueryParam}"` 
                 : categoryParam 
                 ? `${categoryParam.replace(/_/g, ' ')}` 
-                : brandParam
-                ? `${brandParam}`
                 : 'Eyewear & Frames'}
             </h2>
-            <p className="text-xs text-slate-400 font-light">
+            <p className="text-xs text-slate-400 font-light transition-opacity duration-500">
               {totalCount.toLocaleString()} models available
             </p>
+          </div>
+
+          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+            {[
+              { id: '', label: 'All Frames' },
+              { id: 'eyeglasses', label: 'Eyeglasses' },
+              { id: 'sunglasses', label: 'Sunglasses' },
+            ].map((pill) => {
+              const isActive = (categoryParam.toLowerCase() === pill.id.toLowerCase()) || (!categoryParam && pill.id === '');
+              return (
+                <button
+                  key={pill.id || 'all'}
+                  type="button"
+                  onClick={() => handleCategoryPillClick(pill.id)}
+                  className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-walters-navy text-white shadow-2xs font-semibold'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex items-center space-x-3">
             <button
               type="button"
               onClick={() => setIsFilterDrawerOpen(true)}
-              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-50 hover:bg-walters-navy hover:text-white rounded-full text-xs text-slate-700 transition-all duration-200 cursor-pointer border border-slate-200/80 shadow-2xs font-medium"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-50 hover:bg-walters-navy hover:text-white rounded-full text-xs text-slate-700 transition-all duration-300 cursor-pointer border border-slate-200/80 shadow-2xs font-medium"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-walters-gold" />
               <span>Filters & Sort</span>
@@ -323,7 +378,7 @@ export const Catalog: React.FC = () => {
                     setLocalSearchInput('');
                     clearFilter('search');
                   }}
-                  className="absolute right-2.5 top-3 text-slate-400 hover:text-walters-navy cursor-pointer"
+                  className="absolute right-2.5 top-3 text-slate-400 hover:text-walters-navy cursor-pointer transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -333,7 +388,7 @@ export const Catalog: React.FC = () => {
         </div>
 
         {didYouMean && (
-          <div className="mt-4 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center space-x-2 text-xs text-amber-900">
+          <div className="mt-4 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center space-x-2 text-xs text-amber-900 animate-fade-up">
             <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
               Showing results for <strong className="font-semibold text-amber-950 underline">{didYouMean}</strong> instead of <em>"{originalQuery}"</em>
@@ -353,7 +408,7 @@ export const Catalog: React.FC = () => {
         )}
 
         {searchQueryParam && (
-          <div className="flex flex-wrap items-center gap-2 pt-3">
+          <div className="flex flex-wrap items-center gap-2 pt-3 animate-fade-up">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 text-xs rounded-full">
               Search: "{searchQueryParam}"
               <button type="button" onClick={() => clearFilter('search')} className="hover:text-walters-navy cursor-pointer">
@@ -372,7 +427,7 @@ export const Catalog: React.FC = () => {
             ))}
           </div>
         ) : productGroups.length === 0 ? (
-          <div className="text-center py-24 bg-slate-50/50 rounded-3xl border border-slate-100 max-w-lg mx-auto space-y-4">
+          <div className="text-center py-24 bg-slate-50/50 rounded-3xl border border-slate-100 max-w-lg mx-auto space-y-4 animate-fade-up">
             <Search className="w-8 h-8 text-slate-300 mx-auto" />
             <div className="space-y-1">
               <h3 className="font-serif text-lg text-walters-navy">No products found</h3>
@@ -383,7 +438,7 @@ export const Catalog: React.FC = () => {
             <button
               type="button"
               onClick={handleClearAllFilters}
-              className="px-5 py-2.5 bg-walters-navy text-white text-xs rounded-full hover:bg-walters-gold hover:text-walters-navy transition-colors cursor-pointer"
+              className="px-5 py-2.5 bg-walters-navy text-white text-xs rounded-full hover:bg-walters-gold hover:text-walters-navy transition-all duration-300 cursor-pointer"
             >
               Clear filters
             </button>
@@ -391,26 +446,31 @@ export const Catalog: React.FC = () => {
         ) : (
           <div className="space-y-14">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-              {productGroups.map((group) => (
-                <ProductCard
+              {productGroups.map((group, index) => (
+                <div 
                   key={group.groupKey}
-                  group={group}
-                  onAddToCart={handleAddToCart}
-                  formatPrice={formatPrice}
-                />
+                  className="animate-fade-up"
+                  style={{ animationDelay: `${(index % BATCH_PAGE_SIZE) * 60}ms` }}
+                >
+                  <ProductCard
+                    group={group}
+                    onAddToCart={handleAddToCart}
+                    formatPrice={formatPrice}
+                  />
+                </div>
               ))}
             </div>
 
             {page < totalPages && (
               <div className="flex flex-col items-center justify-center pt-8 space-y-3">
-                <span className="text-[11px] text-slate-400 font-medium">
+                <span className="text-[11px] text-slate-400 font-medium transition-opacity duration-300">
                   Showing <strong className="text-walters-navy font-semibold">{products.length.toLocaleString()}</strong> of{' '}
                   <strong className="text-walters-navy font-semibold">{totalCount.toLocaleString()}</strong> products
                 </span>
 
                 <div className="w-56 h-1 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-walters-navy transition-all duration-300 rounded-full"
+                    className="h-full bg-walters-navy transition-all duration-500 ease-out rounded-full"
                     style={{ width: `${Math.min(100, (products.length / (totalCount || 1)) * 100)}%` }}
                   />
                 </div>
@@ -419,12 +479,12 @@ export const Catalog: React.FC = () => {
                   type="button"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="mt-2 inline-flex items-center space-x-2 px-8 py-3 bg-walters-navy text-white font-medium text-xs tracking-wider rounded-full hover:bg-walters-gold hover:text-walters-navy transition-all duration-200 shadow-xs cursor-pointer disabled:opacity-50"
+                  className="mt-2 inline-flex items-center space-x-2 px-8 py-3 bg-walters-navy text-white font-medium text-xs tracking-wider rounded-full hover:bg-slate-800 transition-all duration-300 shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {loadingMore ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Loading next batch...</span>
+                      <span>Loading...</span>
                     </>
                   ) : (
                     <span>Load More ({BATCH_PAGE_SIZE} items)</span>

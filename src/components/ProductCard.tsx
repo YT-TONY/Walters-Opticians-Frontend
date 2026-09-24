@@ -31,7 +31,7 @@ const getColorSwatchStyle = (colorDesc: string, colorCode?: string): React.CSSPr
         ? { background: trimmedCode }
         : { backgroundColor: trimmedCode };
     }
-    if (/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(trimmedCode)) {
+    if (/^[0-9a-fA-F]{3}$\vert{}^[0-9a-fA-F]{6}$/.test(trimmedCode)) {
       return { backgroundColor: `#${trimmedCode}` };
     }
   }
@@ -148,6 +148,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
+  // UNIFIED BRAND CLICK ROUTING
   const handleBrandClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (activeVariant.brand) {
